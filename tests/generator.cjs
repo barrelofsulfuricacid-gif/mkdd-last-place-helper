@@ -43,4 +43,16 @@ for(let n=0;n<1000;n++){
   assert(result.bytes<=188);assert.equal(parseInt(lines.at(-2).split(' ')[1],16)>>>16,result.total);
   checks++;
 }
-console.log(JSON.stringify({status:'passed',fixtureCount:fixtures.length,ticketAndFuzzChecks:checks,invalidInputChecks:11,itemIDs:ITEMS.map(i=>i.id)}));
+// The optional limit patch must be additive, exact, and absent by default.
+const bananaPatch=['04208054 38000040','04355664 0000001C','0035564B 0000001C','0035563B 00000014','04355668 00000008','0035564C 00000008','0035563C 00000006'].join('\n');
+for(const fixture of fixtures){
+  const enabled=generate(fixture.weights,{maximumBananas:true});
+  assert.equal(enabled.code,fixture.code+'\n'+bananaPatch);
+  assert.equal(enabled.lines,fixture.lines+7);
+  assert.equal(enabled.bytes,fixture.bytes);
+  assert.deepEqual(enabled.distribution,fixture.distribution);
+  assert.equal(generate(fixture.weights,{maximumBananas:false}).code,fixture.code);
+  assert.equal(generate(fixture.weights,{maximumBananas:true}).code,enabled.code);
+}
+assert.throws(()=>generate(ITEMS.map(()=>0),{maximumBananas:true}));
+console.log(JSON.stringify({status:'passed',fixtureCount:fixtures.length,ticketAndFuzzChecks:checks,bananaPatchCases:fixtures.length,invalidInputChecks:12,itemIDs:ITEMS.map(i=>i.id)}));

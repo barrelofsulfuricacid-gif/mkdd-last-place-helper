@@ -15,6 +15,7 @@
 @media(max-width:650px){.page{padding:20px 16px 0}.masthead{padding-bottom:27px}.brand{font-size:9px;letter-spacing:1px;gap:7px}.offline{font-size:9px}.intro{display:block;margin-bottom:22px}h1{font-size:34px;letter-spacing:-1.4px;max-width:360px}.intro p{font-size:14px}.version{display:inline-flex;margin-top:17px}.item-groups{grid-template-columns:1fr;gap:25px}.item-groups>section+section{padding:0;border:none;border-top:1px solid var(--line);padding-top:22px}.editor,.result{padding:21px 17px}.editor-top p{font-size:12px}.toolbar{gap:6px;flex-wrap:wrap}.toolbar button{font-size:11px;padding:10px 9px}.toolbar button span{font-size:14px;margin-right:3px}.item-row{min-height:49px}.item-label{font-size:13px;gap:10px}.group-heading h3{font-size:13px}.group-heading>span{font-size:11px}.item-row input{height:36px;font-size:13px}.chance{font-size:12px}.editor-note{font-size:11px}.guide{grid-template-columns:1fr;gap:24px;margin-top:24px;padding-top:23px}.guide h2{font-size:16px}.guide p,.guide li{font-size:12px}.code-actions button{font-size:12px;padding:11px}.primary{padding:16px 12px}.mix-heading h2{font-size:26px}.total{font-size:11px}.legend li{font-size:13px;min-height:35px}.rounding{font-size:11px}.scope p,.scope strong{font-size:11px}footer{flex-direction:column;gap:11px;font-size:9px}.status{font-size:11px}#code{font-size:12px}}
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
+.banana-option{margin:0 0 18px;padding:13px;border:1px solid #e5dfcc;border-radius:8px;background:#fffdf6}.banana-option:has(input:checked){border-color:#d0b348;background:#fff8db}.banana-toggle{display:grid;grid-template-columns:18px 40px minmax(0,1fr);gap:10px;align-items:center;cursor:pointer;min-height:44px}.banana-toggle input{width:18px;height:18px;margin:0;accent-color:#9a7414;cursor:pointer}.banana-toggle svg{width:40px;height:40px}.banana-title{display:block;font-size:13px;font-weight:650}.banana-caption{display:block;margin-top:4px;font-size:11px;line-height:1.5;color:#73705d}.banana-details{font-size:11px;line-height:1.6;color:#6d6346;margin-top:10px;padding-top:10px;border-top:1px solid #e8dba6}
 </style>
 </head>
 <body>
@@ -51,6 +52,14 @@
         <p id="mix-empty" class="empty-mix" hidden>No items in the mix yet.</p>
         <ul id="legend" class="legend" aria-label="Resulting item probabilities"></ul>
         <p class="rounding">Percentages are rounded for display. The code uses your exact weight ratios.</p>
+        <div class="banana-option">
+          <label class="banana-toggle" for="maximum-bananas">
+            <input id="maximum-bananas" type="checkbox" aria-labelledby="banana-title" aria-describedby="banana-caption banana-details">
+            <svg viewBox="0 0 48 48" aria-hidden="true" focusable="false"><path d="M34 5c3 12-5 27-25 29 4 10 24 11 31-2 5-9 1-21-6-27Z" fill="#f7cc42" stroke="#b68b22" stroke-width="1.7" stroke-linejoin="round"/><path d="M36 12c2 13-8 25-21 26" fill="none" stroke="#ffed94" stroke-width="2.5" stroke-linecap="round"/><path d="m34 5 1-3 4 2-2 4" fill="#7c9251"/><g transform="rotate(-19 29 28)"><path d="M18 23h9v6h-4c-3 0-5-2-5-6Zm12 0h9c0 4-2 6-5 6h-4Z" fill="#272a30"/><path d="M26 25h5" stroke="#272a30" stroke-width="2"/><path d="m20 24 3 2m9-2 3 2" stroke="#fff" stroke-width="1.2"/><path d="M26 33q4 4 8-1" fill="none" stroke="#785222" stroke-width="1.7" stroke-linecap="round"/></g><path d="m6 12 1.5 3.5L11 17l-3.5 1.5L6 22l-1.5-3.5L1 17l3.5-1.5Z" fill="#e4b530"/></svg>
+            <span><span id="banana-title" class="banana-title">Maximum Bananas</span><span id="banana-caption" class="banana-caption">Go bananas. 20 regular + 6 giant on track.</span></span>
+          </label>
+          <p id="banana-details" class="banana-details" hidden>Raises limits globally, with 64 items overall. Fully restart the game; don’t load an old save state. This is finite and has not been tested in a live race.</p>
+        </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
         <div class="code-heading"><h3>Action Replay code</h3><span id="code-badge" class="code-badge">Not generated</span></div>
@@ -59,12 +68,12 @@
         </div>
         <div class="code-actions"><button type="button" id="copy" disabled>Copy code</button><button type="button" id="download" disabled>Download .txt <span aria-hidden="true">↓</span></button></div>
         <p id="status" class="status" role="status" aria-live="polite">Ready when you are.</p>
-        <div class="scope"><span class="scope-label">APPLIES TO</span><strong>Multiplayer Grand Prix + VS</strong><p>2+ human karts · Last-place kart overall</p><p class="scope-detail">CPU racers count toward last place. Other positions, single-player and battle keep their normal items.</p></div>
+        <div class="scope"><span class="scope-label">ITEM PROBABILITIES APPLY TO</span><strong>Multiplayer Grand Prix + VS</strong><p>2+ human karts · Last-place kart overall</p><p class="scope-detail">CPU racers count toward last place. Other positions, single-player and battle keep their normal item probabilities. Maximum Bananas changes item limits globally.</p></div>
       </aside>
     </div>
     <section class="guide" aria-label="Using your code">
       <div><h2>From mix to race</h2><ol><li>Generate your mix and copy the code.</li><li>In Dolphin, right-click the game → <strong>Properties → AR Codes → Add</strong>. Name it, paste the code, save and enable it.</li><li>Enable <strong>Config → General → Enable Cheats</strong>. Turn off any previous last-place or item-replacement code.</li><li>Stop emulation and start the game again. Start a multiplayer GP or VS race.</li></ol></div>
-      <div><h2>A few things to know</h2><p>This generator targets the <strong>original USA disc, GM4E01 revision 0</strong>. It generates a Dolphin AR code locally; your game file is never uploaded or changed.</p><p>Weights apply when the item roulette finishes, based on the kart’s position at that moment. Golden Mushrooms keep their normal timed duration.</p><details><summary>Compatibility &amp; testing notes</summary><p>Executable verified against <strong>Mario Kart - Double Dash!! (USA)(2).iso</strong>: USA GM4E01 revision 0. Its executable matches the previously checked CISO, including the hook and unused space for the patch.</p><p>The selection routine is checked against this executable, including every item ID and table boundary. The prior patch passed a single-player race-start check; this generator’s new routine and arbitrary special-item combinations have not been verified in live multiplayer.</p><p>The code keeps the game’s original item pools. Active-item limits may affect whether a selected item can be equipped or used. Avoid combining it with other item, allocation or code-cave patches.</p><p>Fireballs and eggs are grouped by their shared game item IDs. Loose projectiles, empty slots and battle-only objects are not roulette items.</p></details></div>
+      <div><h2>A few things to know</h2><p>This generator targets the <strong>original USA disc, GM4E01 revision 0</strong>. It generates a Dolphin AR code locally; your game file is never uploaded or changed.</p><p>Weights apply when the item roulette finishes, based on the kart’s position at that moment. Golden Mushrooms keep their normal timed duration.</p><details><summary>Compatibility &amp; testing notes</summary><p>Executable verified against <strong>Mario Kart - Double Dash!! (USA)(2).iso</strong>: USA GM4E01 revision 0. Its executable matches the previously checked CISO, including the hook and unused space for the patch.</p><p>The selection routine is checked against this executable, including every item ID and table boundary. The prior patch passed a single-player race-start check; this generator’s new routine and arbitrary special-item combinations have not been verified in live multiplayer.</p><p>The code keeps the game’s original item pools unless Maximum Bananas is enabled. Active-item limits may affect whether a selected item can be equipped or used. Maximum Bananas adds <a href="https://www.gc-forever.com/forums/viewtopic.php?start=25&amp;t=2435">Ralf’s USA banana-limit codes</a>; this combined configuration has not been tested in a live race. Avoid combining it with other item, allocation or code-cave patches.</p><p>Fireballs and eggs are grouped by their shared game item IDs. Loose projectiles, empty slots and battle-only objects are not roulette items.</p></details></div>
     </section>
   </main>
   <footer><span><span class="flag small" aria-hidden="true"></span> SAME GAME. YOUR RULES.</span><span>Unofficial fan tool · No installation · No tracking</span></footer>
@@ -111,7 +120,17 @@
     if (total === 0) throw new Error('Give at least one item a weight above 0.');
     return total;
   }
-  function generate(weights) {
+  // Ralf's USA revision 0 item-limit patches. Separate from the probability hook.
+  const BANANA_LIMIT_CODES = Object.freeze([
+    '04208054 38000040',
+    '04355664 0000001C',
+    '0035564B 0000001C',
+    '0035563B 00000014',
+    '04355668 00000008',
+    '0035564C 00000008',
+    '0035563C 00000006'
+  ]);
+  function generate(weights, {maximumBananas=false}={}) {
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
     // li r4,total-1 (signed 16-bit immediate). UI limits guarantee total <= 19000.
@@ -128,6 +147,7 @@
     if(BASE+words.length*4>CAVE_END) throw new Error('Generated code exceeds its reserved space.');
     const lines=words.map((word,i)=>`${hex(0x04000000 | ((BASE+i*4)&0x01ffffff))} ${hex(word)}`);
     lines.push(`${hex(0x04000000 | (HOOK&0x01ffffff))} ${TEMPLATE.branch}`);
+    if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),generate,validate});
@@ -177,9 +197,17 @@
   $('preset').addEventListener('click',()=>preset('catchup'));
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
-  $('generate').addEventListener('click',()=>{
-    try{current=generate(weights());$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code generated. Copy or download it for Dolphin.';}
-    catch(error){current=null;$('error').hidden=false;$('error').textContent=error.message;}
+  function renderCode(){
+    try{current=generate(weights(),{maximumBananas:$('maximum-bananas').checked});$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent=$('maximum-bananas').checked?'Code ready, including Maximum Bananas.':'Code generated. Copy or download it for Dolphin.';}
+    catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
+  }
+  $('generate').addEventListener('click',renderCode);
+  $('maximum-bananas').addEventListener('change',()=>{
+    const hadCode=!!current;
+    refresh();
+    $('banana-details').hidden=!$('maximum-bananas').checked;
+    if(hadCode)renderCode();
+    else $('status').textContent=$('maximum-bananas').checked?'Maximum Bananas selected. Generate a code when ready.':'Maximum Bananas off. Generate a code when ready.';
   });
   $('copy').addEventListener('click',async()=>{
     if(!current)return;

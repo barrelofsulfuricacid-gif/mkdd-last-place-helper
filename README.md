@@ -10,6 +10,7 @@ Choose relative weights for all 19 Mario Kart: Double Dash!! race items, includi
 - Live percentages, a catch-up preset, equal weights, and clear controls.
 - Set any item's weight to zero to exclude it; use whole-number weights from 0 to 1,000.
 - Copy the generated code or download it as a text file.
+- Check **Maximum Bananas** to append the banana-limit patch to both copied and downloaded code. It starts unchecked; toggling it updates an already generated code immediately.
 - Entirely client-side, with no uploads, tracking, external dependencies, or installation.
 - Download `index.html` and open it in a browser to use the tool offline.
 
@@ -38,9 +39,11 @@ Default weights:
 
 ### Validation and limits
 
+**Maximum Bananas** raises the global track limits to 20 regular bananas and 6 giant bananas, with a 64-item overall ceiling. It allocates 28 regular and 8 giant banana objects. These are finite limits, not infinite items, and they apply globally rather than only to the last-place kart. Fully restart the game after enabling or disabling the code; do not load an old save state. The seven limit-patch lines come from [Ralf's USA item-limit codes](https://www.gc-forever.com/forums/viewtopic.php?start=25&t=2435). Their target addresses were checked against the USA revision 0 ISO; the patch and combined configuration have not been tested in a live race.
+
 The game's executable, original hook, and 188-byte unused patch area were checked against a local USA revision 0 disc image. The selection routine passed 27,262 exhaustive ticket cases, 7,634 scope/register checks, and 120,000 draws through the game's original RNG under PowerPC emulation. The webpage was checked for generation, copying, downloads, offline use, invalid inputs, and responsive layouts.
 
-**Arbitrary special-item combinations have not been verified in live multiplayer.** The game retains its stock item pools, so active-item limits can affect equipping or using a selected item. Avoid combining this code with other item/allocation patches or patches using the same memory space.
+**Arbitrary special-item combinations have not been verified in live multiplayer.** The game retains its stock item pools unless Maximum Bananas is enabled; active-item limits can affect equipping or using a selected item. Avoid combining this code with other item/allocation patches or patches using the same memory space.
 
 ### Development
 
