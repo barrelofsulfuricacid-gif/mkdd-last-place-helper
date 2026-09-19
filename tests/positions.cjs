@@ -55,5 +55,19 @@ for(let trial=0;trial<500;trial++){
   const result=generatePositions(profiles);
   result.distributions.forEach((d,rank)=>assert.equal(d.reduce((s,i)=>s+i.weight,0),result.totals[rank]));
 }
+// Preserve Baby Park settings in position mode, including the long-race hooks.
+let lapCases=0;
+for(const fixture of fixtures)for(let laps=1;laps<=99;laps++)for(const bananas of [false,true]){
+  const output=generatePositions(fixture.positions,{babyParkLaps:laps,maximumBananas:bananas});
+  const prefix=generatePositions(fixture.positions,{maximumBananas:bananas}).code;
+  const legacy=MKDDMixer.generate(defaults(),{babyParkLaps:laps}).code;
+  const legacyPrefix=MKDDMixer.generate(defaults()).code;
+  assert.equal(output.code,prefix+legacy.slice(legacyPrefix.length));
+  assert.equal(output.lines,194+(bananas?7:0)+(laps>9?58:15));
+  const addresses=output.code.split('\n').map(line=>line.split(' ')[0]);
+  assert.equal(new Set(addresses).size,addresses.length,'Combined patches must not overlap');
+  lapCases++;
+}
+for(const laps of [0,100,-1,9.5,Infinity,NaN,'99',true])assert.throws(()=>generatePositions(fixtures[0].positions,{babyParkLaps:laps}),/1 to 99/);
 if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify(fixtures));
-console.log(JSON.stringify({status:'passed',positionFixtures:fixtures.length,exhaustiveTickets:checks,fuzzConfigurations:500}));
+console.log(JSON.stringify({status:'passed',positionFixtures:fixtures.length,exhaustiveTickets:checks,fuzzConfigurations:500,lapCases}));

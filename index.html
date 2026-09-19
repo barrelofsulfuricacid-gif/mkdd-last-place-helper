@@ -16,6 +16,8 @@
 @media(prefers-reduced-motion:reduce){*{transition:none!important}}
 
 .banana-option{margin:0 0 18px;padding:13px;border:1px solid #e5dfcc;border-radius:8px;background:#fffdf6}.banana-option:has(input:checked){border-color:#d0b348;background:#fff8db}.banana-toggle{display:grid;grid-template-columns:18px 40px minmax(0,1fr);gap:10px;align-items:center;cursor:pointer;min-height:44px}.banana-toggle input{width:18px;height:18px;margin:0;accent-color:#9a7414;cursor:pointer}.banana-toggle svg{width:40px;height:40px}.banana-title{display:block;font-size:13px;font-weight:650}.banana-caption{display:block;margin-top:4px;font-size:11px;line-height:1.5;color:#73705d}.banana-details{font-size:11px;line-height:1.6;color:#6d6346;margin-top:10px;padding-top:10px;border-top:1px solid #e8dba6}
+
+.lap-option{border-top:1px solid var(--line);padding-top:14px;margin:14px 0}.lap-controls{display:flex;align-items:center;gap:12px}.lap-toggle{display:flex;align-items:center;gap:9px;flex:1;cursor:pointer;font-size:13px;font-weight:600}.lap-toggle input{width:17px;height:17px;accent-color:var(--red);margin:0}.lap-icon{font-size:24px}.lap-toggle small{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:4px}.lap-number{width:68px;height:38px;border:1px solid #c9cfd5;border-radius:5px;padding:6px 8px;background:#fff;font-variant-numeric:tabular-nums}.lap-number:disabled{color:#949aa1;background:#f6f7f8}.lap-number[aria-invalid=true]{border-color:var(--red)}.lap-details{font-size:11px;line-height:1.6;color:var(--muted);margin-top:10px}
 </style>
 <style>
 .position-settings{margin-top:20px;padding:16px;background:#f7f8f9;border:1px solid var(--line);border-radius:8px}.position-settings>label{display:block;font-size:13px;font-weight:600}.position-settings select{font:inherit;font-size:13px;width:100%;margin:8px 0;padding:10px;border:1px solid #c9cfd5;border-radius:6px;background:white;color:var(--ink)}.position-settings select:focus-visible{outline:3px solid #497ce4;outline-offset:3px}.position-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.position-tabs button{padding:9px 5px}.position-tabs button[aria-pressed=true]{border-color:var(--red);background:#fff3f0}.position-tabs small{display:block;font-size:10px;color:var(--muted);margin-top:4px}.position-enable{display:flex;align-items:center;gap:8px;font-size:13px}.position-enable input{width:18px;height:18px;accent-color:var(--red)}.position-settings p{font-size:12px;line-height:1.6;color:var(--muted);margin-top:8px}.position-settings #apply-all{margin-top:12px}.item-row input:disabled{opacity:.45}.mix-context{font-size:12px;color:var(--muted);line-height:1.5;margin:-10px 0 16px}
@@ -74,6 +76,13 @@
             <span><span id="banana-title" class="banana-title">Maximum Bananas</span><span id="banana-caption" class="banana-caption">Go bananas. 20 regular + 6 giant on track.</span></span>
           </label>
           <p id="banana-details" class="banana-details" hidden>Raises limits globally, with 64 items overall. Fully restart the game; don’t load an old save state. This is finite and has not been tested in a live race.</p>
+        </div>
+        <div class="lap-option">
+          <div class="lap-controls">
+            <label class="lap-toggle" for="custom-baby-park"><input type="checkbox" id="custom-baby-park" aria-describedby="lap-details"><span class="lap-icon" aria-hidden="true">🏁</span><span>Baby Park laps<small>1–99 laps · Grand Prix &amp; VS</small></span></label>
+            <input class="lap-number" id="baby-park-laps" aria-label="Baby Park lap count" aria-describedby="lap-details" type="number" inputmode="numeric" min="1" max="99" step="1" value="99" disabled>
+          </div>
+          <p id="lap-details" class="lap-details">Off: use the game’s normal lap setting.</p>
         </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
@@ -145,7 +154,84 @@
     '0035564C 00000008',
     '0035563C 00000006'
   ]);
-  function generate(weights, {maximumBananas=false}={}) {
+  // Baby Park GP/VS only. Long races also require the bounded HUD/results hooks.
+  // USA revision 0; disjoint from both the item routine and banana pool patches.
+  const BABY_PARK_CODES = Object.freeze([
+    '04005320 807F0038',
+    '04005324 80030008',
+    '04005328 2C000002',
+    '0400532C 4182000C',
+    '04005330 2C000003',
+    '04005334 4082001C',
+    '04005338 807D0004',
+    '0400533C 88030019',
+    '04005340 28000021',
+    '04005344 4082000C',
+    '04005348 38000007',
+    '0400534C B01F002E',
+    '04005350 7FE3FB78',
+    '04005354 481828AC',
+    '04187BFC 4BE7D724',
+  ]);
+  const LONG_RACE_CODES = Object.freeze([
+    '04005358 A863002E',
+    '0400535C 2C030009',
+    '04005360 40810008',
+    '04005364 38600009',
+    '04005368 4E800020',
+    '04144934 4BEC0A24',
+    '0400536C A803002E',
+    '04005370 2C000009',
+    '04005374 40810008',
+    '04005378 38000009',
+    '0400537C 4818473C',
+    '04189AB4 4BE7B8B8',
+    '04005380 A885002E',
+    '04005384 2C040009',
+    '04005388 40810008',
+    '0400538C 38800009',
+    '04005390 4814A2CC',
+    '0414F658 4BEB5D28',
+    '04005394 2C0A0008',
+    '04005398 40810008',
+    '0400539C 39400008',
+    '040053A0 91471588',
+    '040053A4 4814A010',
+    '0414F3B0 4BEB5FE4',
+    '040053A8 40820018',
+    '040053AC 806DA3C8',
+    '040053B0 A803002E',
+    '040053B4 2C000009',
+    '040053B8 41810008',
+    '040053BC 48140FD4',
+    '040053C0 481410CC',
+    '0414638C 4BEBF01C',
+    '040053C4 28040005',
+    '040053C8 4C800020',
+    '040053CC 4824AF3C',
+    '04250FB8 4BDB440D',
+    '040053D0 2C1E0009',
+    '040053D4 40810008',
+    '040053D8 4814A128',
+    '040053DC 3C800001',
+    '040053E0 4814A0F0',
+    '0414F4CC 4BEB5F04',
+    '0414F3EC 2C1E0009',
+  ]);
+  function validateLaps(laps) {
+    if(laps!==null && (typeof laps!=='number' || !Number.isInteger(laps) || laps<1 || laps>99))
+      throw new Error('Baby Park: choose a whole number of laps from 1 to 99.');
+    return laps;
+  }
+  function babyParkCodes(laps) {
+    validateLaps(laps);
+    if(laps===null)return [];
+    const lines=BABY_PARK_CODES.map(line=>line.startsWith('04005348 ')?'04005348 '+hex(0x38000000|laps):line);
+    if(laps>9)lines.push(...LONG_RACE_CODES);
+    return lines;
+  }
+  function generate(weights, {maximumBananas=false,babyParkLaps=null}={}) {
+    validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
     // li r4,total-1 (signed 16-bit immediate). UI limits guarantee total <= 19000.
@@ -163,6 +249,7 @@
     const lines=words.map((word,i)=>`${hex(0x04000000 | ((BASE+i*4)&0x01ffffff))} ${hex(word)}`);
     lines.push(`${hex(0x04000000 | (HOOK&0x01ffffff))} ${TEMPLATE.branch}`);
     if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
+    lines.push(...babyParkCodes(babyParkLaps));
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   // Reproducible with tools/assemble_positions.py. The table region is separate
@@ -179,7 +266,8 @@
     if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
     return totals;
   }
-  function generatePositions(positions,{maximumBananas=false}={}){
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null}={}){
+    validateLaps(babyParkLaps);
     const totals=validatePositions(positions),lines=[];
     function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
     if(BASE+POSITION_WORDS.length*4>CAVE_END || TABLE_BASE+8*80!==TABLE_END) throw new Error('Invalid position template.');
@@ -198,16 +286,17 @@
     });
     write(HOOK,parseInt(TEMPLATE.branch,16));
     if(maximumBananas)lines.push(...BANANA_LIMIT_CODES);
+    lines.push(...babyParkCodes(babyParkLaps));
     return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
   }
-  root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions});
+  root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps});
 })(globalThis);
 
 </script>
 <script>
 (function(){
   'use strict';
-  const {ITEMS,POSITION_NAMES,generate,validate,generatePositions,validatePositions}=MKDDMixer;
+  const {ITEMS,POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps}=MKDDMixer;
   const $=id=>document.getElementById(id);
   const icons={shell:'<path d="M4 15a8 8 0 0 1 16 0H4Z"/><path d="M3 16h18v3H3z"/><path d="m9 6 3 5 3-5M12 11l-5 5m5-5 5 5" fill="none" stroke="white" stroke-width="1.4"/>',banana:'<path d="M17 3c-1 7-5 12-12 12 3 7 12 5 14-1 1-4 0-8-2-11Z"/><path d="M18 6c0 7-5 12-10 12" fill="none" stroke="white" stroke-width="1.3"/>',mushroom:'<path d="M3 13a9 9 0 0 1 18 0c0 2-4 3-9 3s-9-1-9-3Z"/><path d="M8 15h8v5H8z"/><circle cx="9" cy="8" r="2" fill="white"/><circle cx="16" cy="11" r="2" fill="white"/>',star:'<path d="m12 2 3.2 6.4 7.1 1-5.1 5 1.2 7L12 18l-6.4 3.4 1.2-7-5.1-5 7.1-1Z"/>',bolt:'<path d="M12 2h7l-6 8h6L7 23l3-11H5Z"/>',box:'<path d="m12 2 9 5v11l-9 5-9-5V7Z"/><path d="m3 7 9 5 9-5M12 12v11" stroke="white" stroke-width="1.4" fill="none"/>',fire:'<path d="M13 1c2 6-4 7-2 12 2-1 4-3 4-6 9 9 4 15-3 15C2 22 1 10 7 7c0 4 1 5 2 6C7 7 11 6 13 1Z"/>',bomb:'<circle cx="11" cy="14" r="8"/><path d="M11 6V3h6l2-2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="11" r="2" fill="white"/>',egg:'<path d="M12 2c4 0 9 9 9 13s-4 7-9 7-9-3-9-7S8 2 12 2Z"/><circle cx="9" cy="9" r="2" fill="white"/><circle cx="16" cy="16" r="3" fill="white"/>',chomp:'<circle cx="11" cy="11" r="9"/><path d="m4 12 4 2 3-2 3 2 4-2" fill="none" stroke="white" stroke-width="1.5"/><circle cx="14" cy="7" r="1.7" fill="white"/><path d="m17 18 4 4" stroke="currentColor" stroke-width="3"/>',heart:'<path d="M12 21 3 12C-2 4 8-1 12 7c4-8 14-3 9 5Z"/>'};
   const inputs=[];let current=null;let revision=0;let clipboardAttempt=0;
@@ -232,6 +321,12 @@
     $(item.group==='standard'?'standard-items':'special-items').append(row);
     const input=row.querySelector('input');inputs.push(input);input.addEventListener('input',()=>{saveWeights();refresh();});
   });
+  function laps(){return $('custom-baby-park').checked?($('baby-park-laps').value.trim()===''?NaN:Number($('baby-park-laps').value)):null;}
+  function lapDetails(){
+    const on=$('custom-baby-park').checked;
+    $('baby-park-laps').disabled=!on;
+    $('lap-details').textContent=on?'Baby Park only, for every kart in GP & VS. Above 9 laps: the lap counter is hidden, results show the first 9 splits, and later split popups are suppressed. Experimental: code paths checked, full Dolphin race not yet tested. Fully restart the game after changing the code.':'Off: use the game’s normal lap setting.';
+  }
   function weights(){return inputs.map(input=>input.value.trim()===''?NaN:Number(input.value));}
   function refresh(){
     revision++;clipboardAttempt++;current=null;
@@ -263,6 +358,9 @@
       input.closest('.item-row').classList.toggle('active',valid&&values[i]>0);
       input.nextElementSibling.textContent=message?'—':percent(values[i]/total);
     });
+    let lapError='';try{validateLaps(laps());}catch(error){lapError=error.message;}
+    $('baby-park-laps').setAttribute('aria-invalid',String(!!lapError));
+    if(lapError){$('error').hidden=false;$('error').textContent=configurationError||lapError;$('generate').disabled=true;}
     $('mix-empty').hidden=!message;
     $('mix-empty').textContent=!custom()?'This position keeps the game’s normal item chances. Enable custom chances to edit its mix.':values.every(v=>v===0)?'No items in the mix yet.':'Update the weights to preview your mix.';
     if(!message) active.forEach(item=>{
@@ -282,7 +380,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent=$('maximum-bananas').checked?'Code ready, including Maximum Bananas.':'Code generated. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps()};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -293,6 +391,14 @@
     if(hadCode)renderCode();
     else $('status').textContent=$('maximum-bananas').checked?'Maximum Bananas selected. Generate a code when ready.':'Maximum Bananas off. Generate a code when ready.';
   });
+  function changeLaps(){
+    const hadCode=!!current;
+    lapDetails();refresh();
+    if(hadCode && !$('generate').disabled)renderCode();
+    else $('status').textContent='Lap setting updated. Generate a new code when ready.';
+  }
+  $('custom-baby-park').addEventListener('change',changeLaps);
+  $('baby-park-laps').addEventListener('input',changeLaps);
   $('copy').addEventListener('click',async()=>{
     if(!current)return;
     const text=current.code,started=revision,attempt=++clipboardAttempt;
