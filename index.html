@@ -100,9 +100,9 @@
         </div>
         <div class="race-option">
           <div class="option-heading"><label for="custom-speed"><input type="checkbox" id="custom-speed" aria-describedby="speed-details">Kart speed</label><output id="speed-value" for="speed">Game default</output></div>
-          <input id="speed" type="range" min="150" max="500" step="1" value="150" disabled aria-label="Kart speed in cc equivalent" aria-describedby="speed-details">
-          <div class="range-ends"><span>150cc</span><span>500cc</span></div>
-          <p id="speed-details">Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.</p>
+          <input id="speed" type="range" min="150" max="10000" step="1" value="150" disabled aria-label="Kart speed in cc equivalent" aria-describedby="speed-details">
+          <div class="range-ends"><span>150cc</span><span>10,000cc</span></div>
+          <p id="speed-details">Off: use the selected game class. Enable to choose a 150–10,000cc equivalent for every kart.</p>
         </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
@@ -263,7 +263,7 @@
   const floatWord=value=>{const data=new DataView(new ArrayBuffer(4));data.setFloat32(0,value,false);return data.getUint32(0,false);};
   function validateRaceOptions(fog,speedCC){
     if(fog!==null && (typeof fog!=='number'||!Number.isInteger(fog)||fog<0||fog>100)) throw new Error('Fog: choose a whole-number intensity from 0 to 100%.');
-    if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>500)) throw new Error('Speed: choose a whole-number equivalent from 150 to 500cc.');
+    if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>10000)) throw new Error('Speed: choose a whole-number equivalent from 150 to 10,000cc.');
   }
   // Reproducible with tools/assemble_fog.py; disjoint from item and lap patches.
   const FOG_MATERIAL=['80CDA3C8','28060000','4182003C','80C60038','28060000','41820030','80C60008','2C060002','4182000C','2C060003','4082001C','3CC08000','60C650C0','8086000C','C0260010','C0460014','38A60018','9421FFC0','4817D36C'];
@@ -398,7 +398,7 @@
     $('speed').setAttribute('aria-valuetext',speed===null?'Game default':`${speed}cc equivalent, ${(speed/150).toFixed(2)} times the 150cc scale`);
     $('fog-preview').hidden=fog===null;$('fog-preview').style.setProperty('--fog-opacity',fog/100);
     $('fog-details').textContent=fog===null?'Off: keep the track’s normal fog. Enable for custom visibility in GP & VS.':'GP & VS: distant scenery fades into fog while the foreground stays clear. 0% removes course fog; 100% gives dense distance fog. Sky and materials without native fog may stay clear. Preview is illustrative. Replace the old code and fully restart Dolphin; do not reload a save state.';
-    $('speed-details').textContent=speed===null?'Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.':'Custom speed for human and CPU karts in every class: 150cc is the baseline; 500cc uses a 3.33× class multiplier. This is a modded equivalent, not a native 500cc mode. Fully restart after changing the code.';
+    $('speed-details').textContent=speed===null?'Off: use the selected game class. Enable to choose a 150–10,000cc equivalent for every kart.':'Custom speed for human and CPU karts in every class: 150cc is the baseline; 10,000cc uses a 66.67× class multiplier. These are modded equivalents, not native engine classes. Fully restart after changing the code.';
   }
   function refresh(){
     revision++;clipboardAttempt++;current=null;

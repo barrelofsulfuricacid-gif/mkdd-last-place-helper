@@ -24,7 +24,7 @@ for(let fog=0;fog<=100;fog++){
   fixtures.push({fog,code:lines.join('\n')});
 }
 let previousMultiplier=0;
-for(let speedCC=150;speedCC<=500;speedCC++){
+for(let speedCC=150;speedCC<=10000;speedCC++){
   const lines=raceOptionCodes(null,speedCC),writes=decode(lines);
   assert.equal(lines.length,4);
   const multiplier=float(writes.get(0x04361d4c));assert(multiplier>previousMultiplier);
@@ -34,11 +34,11 @@ for(let speedCC=150;speedCC<=500;speedCC++){
   previousMultiplier=multiplier;fixtures.push({speedCC,code:lines.join('\n')});
 }
 for(const value of [-1,101,NaN,Infinity,1.5,'50',true,{},[]])assert.throws(()=>raceOptionCodes(value,null),/Fog/);
-for(const value of [0,149,501,NaN,Infinity,200.5,'200',true,{},[]])assert.throws(()=>raceOptionCodes(null,value),/Speed/);
+for(const value of [0,149,10001,NaN,Infinity,200.5,'200',true,{},[]])assert.throws(()=>raceOptionCodes(null,value),/Speed/);
 assert.deepEqual(raceOptionCodes(),[]);
 for(const create of [options=>generate(weights,options),options=>generatePositions(positions,options)]){
   assert.equal(create({fog:null,speedCC:null}).code,create({}).code);
-  for(const fog of [null,0,1,50,99,100])for(const speedCC of [null,150,200,350,500])for(const babyParkLaps of [null,1,9,10,99])for(const maximumBananas of [false,true]){
+  for(const fog of [null,0,1,50,99,100])for(const speedCC of [null,150,500,1000,10000])for(const babyParkLaps of [null,1,9,10,99])for(const maximumBananas of [false,true]){
     const base=create({babyParkLaps,maximumBananas}),result=create({fog,speedCC,babyParkLaps,maximumBananas}),extra=raceOptionCodes(fog,speedCC);
     assert.equal(result.code,base.code+(extra.length?'\n'+extra.join('\n'):''));
     const lines=result.code.split('\n');assert.equal(lines.length,result.lines);
@@ -47,4 +47,4 @@ for(const create of [options=>generate(weights,options),options=>generatePositio
   assert.throws(()=>create({fog:101}));assert.throws(()=>create({speedCC:149}));
 }
 if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify(fixtures));
-console.log(JSON.stringify({status:'passed',fogValues:101,speedValues:351,combinedConfigurations:600}));
+console.log(JSON.stringify({status:'passed',fogValues:101,speedValues:9851,combinedConfigurations:600}));
