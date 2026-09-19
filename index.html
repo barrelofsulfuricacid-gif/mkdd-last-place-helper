@@ -23,7 +23,9 @@
 .position-settings{margin-top:20px;padding:16px;background:#f7f8f9;border:1px solid var(--line);border-radius:8px}.position-settings>label{display:block;font-size:13px;font-weight:600}.position-settings select{font:inherit;font-size:13px;width:100%;margin:8px 0;padding:10px;border:1px solid #c9cfd5;border-radius:6px;background:white;color:var(--ink)}.position-settings select:focus-visible{outline:3px solid #497ce4;outline-offset:3px}.position-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.position-tabs button{padding:9px 5px}.position-tabs button[aria-pressed=true]{border-color:var(--red);background:#fff3f0}.position-tabs small{display:block;font-size:10px;color:var(--muted);margin-top:4px}.position-enable{display:flex;align-items:center;gap:8px;font-size:13px}.position-enable input{width:18px;height:18px;accent-color:var(--red)}.position-settings p{font-size:12px;line-height:1.6;color:var(--muted);margin-top:8px}.position-settings #apply-all{margin-top:12px}.item-row input:disabled{opacity:.45}.mix-context{font-size:12px;color:var(--muted);line-height:1.5;margin:-10px 0 16px}
 </style>
 <style>
-.race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:#f0f2f4;opacity:var(--fog-opacity,0)}
+.race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.size-physics{margin-top:14px}
+.range-ends button{border:0;background:none;padding:0 6px;color:var(--red);font:inherit;text-decoration:underline;cursor:pointer}.range-ends button:disabled{opacity:.45;cursor:default}
+.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:#f0f2f4;opacity:var(--fog-opacity,0)}
 </style>
 </head>
 <body>
@@ -99,6 +101,14 @@
           <input id="speed" type="range" min="150" max="500" step="1" value="150" disabled aria-label="Kart speed in cc equivalent" aria-describedby="speed-details">
           <div class="range-ends"><span>150cc</span><span>500cc</span></div>
           <p id="speed-details">Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.</p>
+        </div>
+        <div class="race-option">
+          <div class="option-heading"><label for="custom-size"><input type="checkbox" id="custom-size" aria-describedby="size-details">Kart size</label><output id="size-value" for="size">Game default</output></div>
+          <input id="size" type="range" min="0" max="100" step="0.1" value="1" disabled aria-label="Kart size multiplier" aria-describedby="size-details">
+          <div class="range-ends"><span>0×</span><button id="size-normal" type="button" disabled>Reset to 1×</button><span>100×</span></div>
+          <label class="size-physics" for="scale-physics"><input type="checkbox" id="scale-physics" disabled aria-describedby="physics-details">Scale physics and collisions</label>
+          <p id="physics-details">Optional · Experimental. Scales collision boundaries, mass and rotational inertia. Suspension and AI remain stock.</p>
+          <p id="size-details">Off: keep normal kart sizes. Enable for a 0–100× visual size multiplier for every kart.</p>
         </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
@@ -249,15 +259,24 @@
   // Ralf's USA class-speed table and global cap, checked against the retail DOL.
   // CC is an equivalent scale relative to 150cc, not an extra native game class.
   const floatWord=value=>{const data=new DataView(new ArrayBuffer(4));data.setFloat32(0,value,false);return data.getUint32(0,false);};
-  function validateRaceOptions(fog,speedCC){
+  function validateRaceOptions(fog=null,speedCC=null,kartSize=null,scalePhysics=false){
     if(fog!==null && (typeof fog!=='number'||!Number.isInteger(fog)||fog<0||fog>100)) throw new Error('Fog: choose a whole-number intensity from 0 to 100%.');
+    if(typeof scalePhysics!=='boolean'||(scalePhysics&&kartSize===null)) throw new Error('Enable kart size before scaling physics and collisions.');
+    if(kartSize!==null && (typeof kartSize!=='number'||!Number.isFinite(kartSize)||kartSize<0||kartSize>100)) throw new Error('Kart size: choose a multiplier from 0 to 100×.');
     if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>500)) throw new Error('Speed: choose a whole-number equivalent from 150 to 500cc.');
   }
   // Reproducible with tools/assemble_fog.py; disjoint from item and lap patches.
   const FOG_WORDS=['9421FFD0','7C0802A6','90010034','90610008','808DA3C8','80840038','80840008','2C040002','4182000C','2C040003','40820038','807E0000','81830000','818C0014','7D8903A6','4E800421','3C808000','608450C0','C0240000','C0440000','C0640004','C0840004','38640008','48022371','80610008','80010034','7C0803A6','38210030','4811F2B8'];
   const FOG_MATERIAL=['80CDA3C8','28060000','4182003C','80C60038','28060000','41820030','80C60008','2C060002','4182000C','2C060003','4082001C','3CC08000','60C650C0','8086000C','C0260010','C0460014','38A60018','9421FFC0','4817D36C'];
-  function raceOptionCodes(fog=null,speedCC=null){
-    validateRaceOptions(fog,speedCC);const lines=[];
+  // Reproducible with tools/assemble_size.py; separate visual/physical scales.
+  const SIZE_WORDS=["9421FFE0","7C0802A6","90010024","81030000","91010008","482CF72D","81010008","38A8019C","38C1006C","3800000C","7C0903A6","84E50004","94E60004","4200FFF8","3CA08000","C02541D0","388801A0","7C832378","48000059","880805B3","54002036","818DB168","398C00C0","7D8C0214","39600004","812C0000","38690158","48000035","386901E8","4800002D","38690248","48000025","398C0004","396BFFFF","2C0B0000","4082FFD8","80010024","7C0803A6","38210020","4E800020","7C651B78","7C862378","38000003","7C0903A6","C0050000","EC000072","D0050000","C0050004","EC000072","D0050004","C0050008","EC000072","D0050008","C005000C","C046000C","EC001028","EC000072","EC00102A","D005000C","38A50010","38C60010","4200FFBC","4E800020"];
+  const SIZE_SHADOW=["3C808000","C02441D0","807E0028","C00300A8","EC000072","D00300A8","C00300AC","EC000072","D00300AC","807E0020","482CFE4C"];
+  const SIZE_RESTORE=["9421FFF0","7C0802A6","90010014","4817FB7D","3C608000","C02341D4","38610060","389E01A0","38000003","7C0903A6","C0030000","EC000072","D0040000","C0030004","EC000072","D0040004","C0030008","EC000072","D0040008","8003000C","9004000C","38630010","38840010","4200FFCC","80010014","7C0803A6","38210010","4E800020"];
+  const SIZE_PHYSICS=["3C608000","C02341D4","EC410072","EC620072","EC4200F2","C01D03A4","EC0000F2","D01D03A4","C01D0230","EC0000B2","D01D0230","C01D0234","EC0000B2","D01D0234","C01D0238","EC0000B2","D01D0238","C01D0320","EC000072","D01D0320","C01D0324","EC000072","D01D0324","C01D0328","EC000072","D01D0328","C01D03A8","EC000072","D01D03A8","BB810020","4829954C"];
+  const SIZE_WALLS=[[0x803635a0,130],[0x803635b8,150],[0x803635d0,140],[0x803635e8,130],[0x80363600,130],[0x80363618,170],[0x80363630,170],[0x80363648,150],[0x80363660,150],[0x80363678,130],[0x80363690,130],[0x803636a8,130],[0x803636c0,170]];
+  const SIZE_OBJECT_RADII=[75,90,75,65,75,65,90,90,75,65,75,65,75,65,75,65,65,65,90,90,100];
+  function raceOptionCodes(fog=null,speedCC=null,kartSize=null,scalePhysics=false){
+    validateRaceOptions(fog,speedCC,kartSize,scalePhysics);const lines=[];
     const write=(address,word)=>lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);
     if(fog!==null){
       const fraction=fog/100,end=10+50000*(1-fraction)**2;
@@ -274,9 +293,23 @@
       [0x80361d44,0x80361d48,0x80361d4c].forEach(address=>write(address,floatWord(1.15*scale)));
       write(0x803d1894,floatWord(200*scale));
     }
+    if(kartSize!==null){
+      const physicalSize=scalePhysics?Math.max(0.01,kartSize):1;
+      SIZE_WORDS.forEach((word,i)=>write(0x80003f20+i*4,parseInt(word,16)));
+      SIZE_SHADOW.forEach((word,i)=>write(0x80004040+i*4,parseInt(word,16)));
+      SIZE_RESTORE.forEach((word,i)=>write(0x80004080+i*4,parseInt(word,16)));
+      write(0x800041d0,floatWord(kartSize));write(0x800041d4,floatWord(physicalSize));
+      write(0x802d3dc4,0x4bd3015d);write(0x802d3eb0,0x4bd30190);write(0x802d3ec4,0x4bd301bd);
+      if(scalePhysics){
+        SIZE_PHYSICS.forEach((word,i)=>write(0x80004100+i*4,parseInt(word,16)));
+        write(0x8029d6c0,0x4bd66a40);
+        SIZE_WALLS.forEach(([address,radius])=>write(address,floatWord(radius*physicalSize)));
+        SIZE_OBJECT_RADII.forEach((radius,i)=>write(0x80353a74+i*4,floatWord(radius*physicalSize)));
+      }
+    }
     return lines;
   }
-  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null}={}) {
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -296,7 +329,7 @@
     lines.push(`${hex(0x04000000 | (HOOK&0x01ffffff))} ${TEMPLATE.branch}`);
     if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
-    lines.push(...raceOptionCodes(fog,speedCC));
+    lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   // Reproducible with tools/assemble_positions.py. The table region is separate
@@ -313,7 +346,7 @@
     if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
     return totals;
   }
-  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null}={}){
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false}={}){
     validateLaps(babyParkLaps);
     const totals=validatePositions(positions),lines=[];
     function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
@@ -334,7 +367,7 @@
     write(HOOK,parseInt(TEMPLATE.branch,16));
     if(maximumBananas)lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
-    lines.push(...raceOptionCodes(fog,speedCC));
+    lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions,raceOptionCodes});
@@ -378,8 +411,16 @@
   function weights(){return inputs.map(input=>input.value.trim()===''?NaN:Number(input.value));}
   const fogSetting=()=>$('custom-fog').checked?Number($('fog').value):null;
   const speedSetting=()=>$('custom-speed').checked?Number($('speed').value):null;
+  const sizeSetting=()=>$('custom-size').checked?Number($('size').value):null;
+  const physicsSetting=()=>$('custom-size').checked&&$('scale-physics').checked;
   function raceOptionDetails(){
-    const fog=fogSetting(),speed=speedSetting();
+    const fog=fogSetting(),speed=speedSetting(),size=sizeSetting();
+    $('scale-physics').disabled=size===null;
+    $('physics-details').textContent=physicsSetting()?`Experimental: scales kart-to-kart, wall and course-object collision radii, ground-contact vertices, mass and rotational inertia. ${size===0?'0× keeps a tiny 0.01× physical size to avoid zero mass. ':''}Suspension, AI, camera and item hitboxes are not retuned; extreme sizes can be undriveable.`:'Optional · Experimental. Scales collision boundaries, mass and rotational inertia. Suspension and AI remain stock.';
+    $('size').disabled=size===null;$('size-normal').disabled=size===null;
+    $('size-value').textContent=size===null?'Game default':`${size}×${size===1?' · Normal':size===0?' · Zero size':''}`;
+    $('size').setAttribute('aria-valuetext',size===null?'Game default':`${size} times normal kart size`);
+    $('size-details').textContent=size===null?'Off: keep normal kart sizes. Enable for a 0–100× visual size multiplier for every kart.':'Scales human and CPU kart bodies, drivers, wheels and shadows. 0× collapses their models; 1× is normal. Enable the physics checkbox to also scale physics and collisions. Large sizes can obscure the track. Fully restart after changing the code.';
     $('fog').disabled=fog===null;$('speed').disabled=speed===null;
     $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Whiteout':fog===0?' · Clear':''}`;
     $('speed-value').textContent=speed===null?'Game default':`${speed}cc · ${(speed/150).toFixed(2)}×`;
@@ -422,7 +463,7 @@
     let lapError='';try{validateLaps(laps());}catch(error){lapError=error.message;}
     $('baby-park-laps').setAttribute('aria-invalid',String(!!lapError));
     if(lapError){$('error').hidden=false;$('error').textContent=configurationError||lapError;$('generate').disabled=true;}
-    try{validateRaceOptions(fogSetting(),speedSetting());}catch(error){$('error').hidden=false;$('error').textContent=error.message;$('generate').disabled=true;}
+    try{validateRaceOptions(fogSetting(),speedSetting(),sizeSetting(),physicsSetting());}catch(error){$('error').hidden=false;$('error').textContent=error.message;$('generate').disabled=true;}
     $('mix-empty').hidden=!message;
     $('mix-empty').textContent=!custom()?'This position keeps the game’s normal item chances. Enable custom chances to edit its mix.':values.every(v=>v===0)?'No items in the mix yet.':'Update the weights to preview your mix.';
     if(!message) active.forEach(item=>{
@@ -442,7 +483,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting()};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting()};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -462,8 +503,9 @@
   $('custom-baby-park').addEventListener('change',changeLaps);
   $('baby-park-laps').addEventListener('input',changeLaps);
   function changeRaceOptions(){const hadCode=!!current;raceOptionDetails();refresh();if(hadCode&&!$('generate').disabled)renderCode();}
-  ['custom-fog','custom-speed'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
-  ['fog','speed'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
+  ['custom-fog','custom-speed','custom-size','scale-physics'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
+  $('size-normal').addEventListener('click',()=>{$('size').value='1';changeRaceOptions();});
+  ['fog','speed','size'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
   $('copy').addEventListener('click',async()=>{
     if(!current)return;
     const text=current.code,started=revision,attempt=++clipboardAttempt;
