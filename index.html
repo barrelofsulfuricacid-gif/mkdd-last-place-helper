@@ -69,6 +69,10 @@
           </div>
           <p id="lap-details" class="lap-details">Off: use the game’s normal lap setting.</p>
         </div>
+        <div class="lap-option intro-option">
+          <label class="lap-toggle" for="skip-intro"><input type="checkbox" id="skip-intro" aria-describedby="intro-details"><span class="lap-icon" aria-hidden="true">⏩</span><span>Skip intro<small>Straight to the main menu</small></span></label>
+          <p id="intro-details" class="lap-details" hidden>Skips the startup logo waits, opening movie and Press Start prompt. Normal loading and any memory-card or display prompts still apply. Fully restart Dolphin after changing the code.</p>
+        </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
         <div class="code-heading"><h3>Action Replay code</h3><span id="code-badge" class="code-badge">Not generated</span></div>
@@ -215,7 +219,15 @@
     if(laps>9)lines.push(...LONG_RACE_CODES);
     return lines;
   }
-  function generate(weights, {maximumBananas=false,babyParkLaps=null}={}) {
+  // Ralf's logo waits, MKDD Extender's movie exit, and native title Start path.
+  const SKIP_INTRO_CODES = Object.freeze([
+    '041CFD50 60000000',
+    '041CFE18 60000000',
+    '041B0D58 38000003',
+    '041B10AC 60000000',
+    '0412DBEC 60000000'
+  ]);
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,skipIntro=false}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -235,6 +247,7 @@
     lines.push(`${hex(0x04000000 | (HOOK&0x01ffffff))} ${TEMPLATE.branch}`);
     if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
+    if(skipIntro)lines.push(...SKIP_INTRO_CODES);
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),generate,validate,validateLaps});
@@ -294,7 +307,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{current=generate(weights(),{maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps()});$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+'. Copy or download it for Dolphin.';}
+    try{current=generate(weights(),{maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),skipIntro:$('skip-intro').checked});$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+($('skip-intro').checked?' · Skip intro':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -313,6 +326,13 @@
   }
   $('custom-baby-park').addEventListener('change',changeLaps);
   $('baby-park-laps').addEventListener('input',changeLaps);
+  $('skip-intro').addEventListener('change',()=>{
+    const hadCode=!!current;
+    $('intro-details').hidden=!$('skip-intro').checked;
+    refresh();
+    if(hadCode && !$('generate').disabled)renderCode();
+    else $('status').textContent='Intro setting updated. Generate a new code when ready.';
+  });
   $('copy').addEventListener('click',async()=>{
     if(!current)return;
     const text=current.code,started=revision,attempt=++clipboardAttempt;

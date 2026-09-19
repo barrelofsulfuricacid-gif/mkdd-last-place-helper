@@ -89,4 +89,19 @@ for(const fixture of fixtures){
 }
 for(const laps of [0,100,-1,9.5,Infinity,NaN,'99',true])assert.throws(()=>generate(fixtures[0].weights,{babyParkLaps:laps}),/1 to 99/);
 console.log(JSON.stringify({status:'passed',lapCases,lapRange:[1,99],shortLapLines:15,longLapLines:58}));
+const introPatch=['041CFD50 60000000','041CFE18 60000000','041B0D58 38000003','041B10AC 60000000','0412DBEC 60000000'].join('\n');
+let introCases=0;
+for(const fixture of fixtures)for(const babyParkLaps of [null,1,9,10,99])for(const maximumBananas of [false,true]){
+  const options={babyParkLaps,maximumBananas};
+  const base=generate(fixture.weights,options),enabled=generate(fixture.weights,{...options,skipIntro:true});
+  assert.equal(enabled.code,base.code+'\n'+introPatch);
+  assert.equal(enabled.lines,base.lines+5);
+  assert.deepEqual(enabled.distribution,base.distribution);
+  assert.equal(generate(fixture.weights,{...options,skipIntro:false}).code,base.code);
+  const addresses=enabled.code.split('\n').map(line=>line.split(' ')[0]);
+  assert.equal(new Set(addresses).size,addresses.length);
+  introCases++;
+}
+assert.throws(()=>generate(ITEMS.map(()=>0),{skipIntro:true}));
+console.log(JSON.stringify({status:'passed',introCases,introLines:5}));
 console.log(JSON.stringify({status:'passed',fixtureCount:fixtures.length,ticketAndFuzzChecks:checks,bananaPatchCases:fixtures.length,invalidInputChecks:12,itemIDs:ITEMS.map(i=>i.id)}));
