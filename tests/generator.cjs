@@ -55,4 +55,38 @@ for(const fixture of fixtures){
   assert.equal(generate(fixture.weights,{maximumBananas:true}).code,enabled.code);
 }
 assert.throws(()=>generate(ITEMS.map(()=>0),{maximumBananas:true}));
+// All supported lap counts combine with every item and the optional banana patch.
+let lapCases=0;
+for(const fixture of fixtures){
+  for(let laps=1;laps<=99;laps++)for(const bananas of [false,true]){
+    const output=generate(fixture.weights,{maximumBananas:bananas,babyParkLaps:laps});
+    const prefix=generate(fixture.weights,{maximumBananas:bananas}).code;
+    assert(output.code.startsWith(prefix+'\n'));
+    const extra=output.code.slice(prefix.length+1).split('\n');
+    assert.equal(extra.length,laps>9?58:15);
+    assert.equal(output.lines,fixture.lines+(bananas?7:0)+extra.length);
+    assert.equal(extra[10],`04005348 ${(0x38000000|laps).toString(16).toUpperCase()}`);
+    assert.equal(extra[14],'04187BFC 4BE7D724');
+    const addresses=output.code.split('\n').map(line=>line.split(' ')[0]);
+    assert.equal(new Set(addresses).size,addresses.length,'No overlapping writes');
+    assert.deepEqual(output.distribution,fixture.distribution);
+    const hookMap=new Map(extra.map(line=>line.split(' ')));
+    if(laps>9){
+      assert.equal(hookMap.get('04144934'),'4BEC0A24');
+      assert.equal(hookMap.get('04189AB4'),'4BE7B8B8');
+      assert.equal(hookMap.get('0414F658'),'4BEB5D28');
+      assert.equal(hookMap.get('0414F3B0'),'4BEB5FE4');
+      assert.equal(hookMap.get('0414F3EC'),'2C1E0009');
+      assert(hookMap.has('0414638C'));assert(hookMap.has('04250FB8'));assert(hookMap.has('0414F4CC'));
+    }
+    for(const [a] of hookMap){
+      const address=parseInt(a,16);
+      if(address<0x04010000)assert(address>=0x04005320&&address<0x040053e4,'Lap cave bounds');
+    }
+    lapCases++;
+  }
+  assert.equal(generate(fixture.weights,{babyParkLaps:null}).code,fixture.code);
+}
+for(const laps of [0,100,-1,9.5,Infinity,NaN,'99',true])assert.throws(()=>generate(fixtures[0].weights,{babyParkLaps:laps}),/1 to 99/);
+console.log(JSON.stringify({status:'passed',lapCases,lapRange:[1,99],shortLapLines:15,longLapLines:58}));
 console.log(JSON.stringify({status:'passed',fixtureCount:fixtures.length,ticketAndFuzzChecks:checks,bananaPatchCases:fixtures.length,invalidInputChecks:12,itemIDs:ITEMS.map(i=>i.id)}));
