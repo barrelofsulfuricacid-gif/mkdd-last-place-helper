@@ -24,10 +24,10 @@ assert.throws(()=>raceOptionCodes(null,null,1,1),/Enable kart size/);
 let combinations=0;
 for(const create of [o=>generate(weights,o),o=>generatePositions(positions,o)]){
   assert.equal(create({kartSize:null,scalePhysics:false}).code,create({}).code);
-  for(const kartSize of [0,.1,.5,1,2,10,100])for(const scalePhysics of [false,true])for(const fog of [null,0,100])for(const speedCC of [null,150,500])for(const babyParkLaps of [null,1,99])for(const maximumBananas of [false,true]){
+  for(const kartSize of [0,.1,.5,1,2,10,100])for(const scalePhysics of [false,true])for(const fog of [null,0,100])for(const speedCC of [null,150,500])for(const babyParkLaps of [null,1,99])for(const maximumBananas of [false,true])for(const skipIntro of [false,true]){
     const base=create({fog,speedCC,babyParkLaps,maximumBananas});
-    const result=create({fog,speedCC,babyParkLaps,maximumBananas,kartSize,scalePhysics});
-    assert.equal(result.code,base.code+'\n'+raceOptionCodes(null,null,kartSize,scalePhysics).join('\n'));
+    const result=create({fog,speedCC,babyParkLaps,maximumBananas,kartSize,scalePhysics,skipIntro});
+    assert.equal(result.code,base.code+'\n'+raceOptionCodes(null,null,kartSize,scalePhysics).join('\n')+(skipIntro?'\n041CFD50 60000000\n041CFE18 60000000\n041B0D58 38000003\n041B10AC 60000000\n0412DBEC 60000000':''));
     const lines=result.code.split('\n');assert.equal(lines.length,result.lines);
     assert.equal(decode(lines).size,lines.length,'All option writes must be disjoint');
     combinations++;

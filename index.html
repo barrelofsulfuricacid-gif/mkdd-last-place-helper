@@ -89,6 +89,10 @@
           </div>
           <p id="lap-details" class="lap-details">Off: use the game’s normal lap setting.</p>
         </div>
+        <div class="lap-option intro-option">
+          <label class="lap-toggle" for="skip-intro"><input type="checkbox" id="skip-intro" aria-describedby="intro-details"><span class="lap-icon" aria-hidden="true">⏩</span><span>Skip intro<small>Straight to the main menu</small></span></label>
+          <p id="intro-details" class="lap-details" hidden>Skips the startup logo waits, opening movie and Press Start prompt. Normal loading and any memory-card or display prompts still apply. Fully restart Dolphin after changing the code.</p>
+        </div>
         <div class="race-option">
           <div class="option-heading"><label for="custom-fog"><input type="checkbox" id="custom-fog" aria-describedby="fog-details">Fog / visibility</label><output id="fog-value" for="fog">Track default</output></div>
           <input id="fog" type="range" min="0" max="100" step="1" value="50" disabled aria-label="Fog intensity" aria-describedby="fog-details">
@@ -256,6 +260,14 @@
     if(laps>9)lines.push(...LONG_RACE_CODES);
     return lines;
   }
+  // Ralf's logo waits, MKDD Extender's movie exit, and native title Start path.
+  const SKIP_INTRO_CODES = Object.freeze([
+    '041CFD50 60000000',
+    '041CFE18 60000000',
+    '041B0D58 38000003',
+    '041B10AC 60000000',
+    '0412DBEC 60000000'
+  ]);
   // Ralf's USA class-speed table and global cap, checked against the retail DOL.
   // CC is an equivalent scale relative to 150cc, not an extra native game class.
   const floatWord=value=>{const data=new DataView(new ArrayBuffer(4));data.setFloat32(0,value,false);return data.getUint32(0,false);};
@@ -309,7 +321,7 @@
     }
     return lines;
   }
-  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false}={}) {
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -330,6 +342,7 @@
     if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
+    if(skipIntro)lines.push(...SKIP_INTRO_CODES);
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   // Reproducible with tools/assemble_positions.py. The table region is separate
@@ -346,7 +359,7 @@
     if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
     return totals;
   }
-  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false}={}){
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false}={}){
     validateLaps(babyParkLaps);
     const totals=validatePositions(positions),lines=[];
     function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
@@ -368,6 +381,7 @@
     if(maximumBananas)lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
+    if(skipIntro)lines.push(...SKIP_INTRO_CODES);
     return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions,raceOptionCodes});
@@ -483,7 +497,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting()};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -502,6 +516,13 @@
   }
   $('custom-baby-park').addEventListener('change',changeLaps);
   $('baby-park-laps').addEventListener('input',changeLaps);
+  $('skip-intro').addEventListener('change',()=>{
+    const hadCode=!!current;
+    $('intro-details').hidden=!$('skip-intro').checked;
+    refresh();
+    if(hadCode && !$('generate').disabled)renderCode();
+    else $('status').textContent='Intro setting updated. Generate a new code when ready.';
+  });
   function changeRaceOptions(){const hadCode=!!current;raceOptionDetails();refresh();if(hadCode&&!$('generate').disabled)renderCode();}
   ['custom-fog','custom-speed','custom-size','scale-physics'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
   $('size-normal').addEventListener('click',()=>{$('size').value='1';changeRaceOptions();});

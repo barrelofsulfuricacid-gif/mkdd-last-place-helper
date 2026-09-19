@@ -46,7 +46,7 @@ node tests/kart-size.cjs /tmp/kart-size.json
 python tests/kart_size_ppc.py /path/to/GM4E01.iso /tmp/kart-size.json
 ```
 
-The portable test covers all 1,001 slider values with physical scaling both off and on, invalid inputs, unchanged defaults, and 1,512 combinations with existing options. It checks that every write address is unique.
+The portable test covers all 1,001 slider values with physical scaling both off and on, invalid inputs, unchanged defaults, and 3,024 combinations with existing options. It checks that every write address is unique.
 
 The read-only native test requires `unicorn`. It runs the actual retail display routine and patch code: 2,044 matrix/shadow cases across all eight kart slots, 1,061 injected physical-initialization cases, 147 native initializations covering every one of the 21 kart types, and 12,012 native kart-to-kart collision broad-phase threshold cases. It checks endpoints, physical positivity at zero, matrix restoration, register/stack preservation, original hook signatures, stock radius values and patch memory guards. The final model-copy call is stubbed to capture its matrix; collision-status filtering is stubbed to allow testing the size threshold. Contact response after the broad phase, suspension integration, GPU rasterization and live Dolphin gameplay remain untested.
 
