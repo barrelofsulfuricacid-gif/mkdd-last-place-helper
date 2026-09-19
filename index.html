@@ -23,7 +23,7 @@
 .position-settings{margin-top:20px;padding:16px;background:#f7f8f9;border:1px solid var(--line);border-radius:8px}.position-settings>label{display:block;font-size:13px;font-weight:600}.position-settings select{font:inherit;font-size:13px;width:100%;margin:8px 0;padding:10px;border:1px solid #c9cfd5;border-radius:6px;background:white;color:var(--ink)}.position-settings select:focus-visible{outline:3px solid #497ce4;outline-offset:3px}.position-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.position-tabs button{padding:9px 5px}.position-tabs button[aria-pressed=true]{border-color:var(--red);background:#fff3f0}.position-tabs small{display:block;font-size:10px;color:var(--muted);margin-top:4px}.position-enable{display:flex;align-items:center;gap:8px;font-size:13px}.position-enable input{width:18px;height:18px;accent-color:var(--red)}.position-settings p{font-size:12px;line-height:1.6;color:var(--muted);margin-top:8px}.position-settings #apply-all{margin-top:12px}.item-row input:disabled{opacity:.45}.mix-context{font-size:12px;color:var(--muted);line-height:1.5;margin:-10px 0 16px}
 </style>
 <style>
-.race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:#f0f2f4;opacity:var(--fog-opacity,0)}
+.race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,#f0f2f4 0%,#f0f2f4 25%,transparent 88%);opacity:var(--fog-opacity,0)}
 </style>
 </head>
 <body>
@@ -94,7 +94,7 @@
         <div class="race-option">
           <div class="option-heading"><label for="custom-fog"><input type="checkbox" id="custom-fog" aria-describedby="fog-details">Fog / visibility</label><output id="fog-value" for="fog">Track default</output></div>
           <input id="fog" type="range" min="0" max="100" step="1" value="50" disabled aria-label="Fog intensity" aria-describedby="fog-details">
-          <div class="range-ends"><span>0% · Clear</span><span>100% · Whiteout</span></div>
+          <div class="range-ends"><span>0% · Clear</span><span>100% · Dense</span></div>
           <div id="fog-preview" class="fog-preview" aria-hidden="true" hidden></div>
           <p id="fog-details">Off: keep the track’s normal fog. Enable for custom visibility in GP &amp; VS.</p>
         </div>
@@ -266,20 +266,17 @@
     if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>500)) throw new Error('Speed: choose a whole-number equivalent from 150 to 500cc.');
   }
   // Reproducible with tools/assemble_fog.py; disjoint from item and lap patches.
-  const FOG_WORDS=['9421FFD0','7C0802A6','90010034','90610008','808DA3C8','80840038','80840008','2C040002','4182000C','2C040003','40820038','807E0000','81830000','818C0014','7D8903A6','4E800421','3C808000','608450C0','C0240000','C0440000','C0640004','C0840004','38640008','48022371','80610008','80010034','7C0803A6','38210030','4811F2B8'];
   const FOG_MATERIAL=['80CDA3C8','28060000','4182003C','80C60038','28060000','41820030','80C60008','2C060002','4182000C','2C060003','4082001C','3CC08000','60C650C0','8086000C','C0260010','C0460014','38A60018','9421FFC0','4817D36C'];
   function raceOptionCodes(fog=null,speedCC=null){
     validateRaceOptions(fog,speedCC);const lines=[];
     const write=(address,word)=>lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);
     if(fog!==null){
-      const fraction=fog/100,end=10+50000*(1-fraction)**2;
-      FOG_WORDS.forEach((word,i)=>write(0x80005000+i*4,parseInt(word,16)));
+      // Keep a clear foreground, then blend by camera-space depth only.
+      // Even at maximum density, the near 1,200 game units remain unfogged.
+      const distance=(1-fog/100)**2,start=1200+8000*distance,end=3200+48000*distance;
       FOG_MATERIAL.forEach((word,i)=>write(0x800050e0+i*4,parseInt(word,16)));
-      // A quadratic veil builds gradually and becomes fully opaque at 100%.
-      // It is drawn after the 3D scene, so sky and unfogged objects cannot leak.
-      const alpha=Math.round(255*fraction*fraction);
-      [0,floatWord(1280),0xf0f2f400|alpha,fog===0?0:2,floatWord(end*.25),floatWord(end),0xf0f2f4ff].forEach((word,i)=>write(0x800050c0+i*4,word));
-      write(0x801a1e64,0x4be6319d);write(0x80182490,0x4be82c50);
+      [fog===0?0:2,floatWord(start),floatWord(end),0xf0f2f4ff].forEach((word,i)=>write(0x800050cc+i*4,word));
+      write(0x80182490,0x4be82c50);
     }
     if(speedCC!==null){
       const scale=speedCC/150;
@@ -395,12 +392,12 @@
   function raceOptionDetails(){
     const fog=fogSetting(),speed=speedSetting();
     $('fog').disabled=fog===null;$('speed').disabled=speed===null;
-    $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Whiteout':fog===0?' · Clear':''}`;
+    $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Dense':fog===0?' · Clear':''}`;
     $('speed-value').textContent=speed===null?'Game default':`${speed}cc · ${(speed/150).toFixed(2)}×`;
-    $('fog').setAttribute('aria-valuetext',fog===null?'Track default':`${fog} percent fog${fog===100?', complete whiteout':''}`);
+    $('fog').setAttribute('aria-valuetext',fog===null?'Track default':`${fog} percent fog${fog===100?', dense distance fog':''}`);
     $('speed').setAttribute('aria-valuetext',speed===null?'Game default':`${speed}cc equivalent, ${(speed/150).toFixed(2)} times the 150cc scale`);
-    $('fog-preview').hidden=fog===null;$('fog-preview').style.setProperty('--fog-opacity',(fog/100)**2);
-    $('fog-details').textContent=fog===null?'Off: keep the track’s normal fog. Enable for custom visibility in GP & VS.':'GP & VS: 0% removes course fog; 100% completely hides the race scene in pale fog, including the sky and karts. The HUD and pause menu stay visible. The small preview is illustrative. Fully restart after changing the code.';
+    $('fog-preview').hidden=fog===null;$('fog-preview').style.setProperty('--fog-opacity',fog/100);
+    $('fog-details').textContent=fog===null?'Off: keep the track’s normal fog. Enable for custom visibility in GP & VS.':'GP & VS: distant scenery fades into fog while the foreground stays clear. 0% removes course fog; 100% gives dense distance fog. Sky and materials without native fog may stay clear. Preview is illustrative. Replace the old code and fully restart Dolphin; do not reload a save state.';
     $('speed-details').textContent=speed===null?'Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.':'Custom speed for human and CPU karts in every class: 150cc is the baseline; 500cc uses a 3.33× class multiplier. This is a modded equivalent, not a native 500cc mode. Fully restart after changing the code.';
   }
   function refresh(){

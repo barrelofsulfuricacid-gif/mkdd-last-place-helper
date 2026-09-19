@@ -4,22 +4,21 @@ Both options are off by default and compose with both item modes, Maximum Banana
 
 ## Fog
 
-The 0–100 slider uses two complementary changes in GP/VS (single-player or multiplayer):
+The 0–100 slider controls **distance fog** in GP/VS, including single-player and split-screen. It intercepts `ExModel::setFogInfo` for materials already configured to use native fog. Zero selects no fog; other values select perspective linear fog in neutral `#f0f2f4`. Calls outside GP/VS or without a race manager retain their original arguments. Camera near/far projection values are preserved.
 
-1. Intercept `ExModel::setFogInfo` to give fog-enabled world materials linear distance fog in a neutral `#f0f2f4` color. Fog start/end move closer as intensity increases. Zero sets the native fog type to none. Other modes and calls without a race manager retain their original arguments.
-2. Intercept `RaceDrawer::drawPostScene` immediately before the HUD draw. Restore the full-screen orthographic port and draw a fog-colored rectangle through native `J2DFillBox`, with alpha `round(255 * (fog / 100)^2)`. This covers sky, effects and materials that do not participate in distance fog. At 100%, alpha is 255; the native color routine chooses unblended replacement, leaving no world visibility. HUD and pause controls are drawn afterward.
+With `q = (1 - fog / 100)^2`, start is `1200 + 8000*q` and end is `3200 + 48000*q` game units. These are mod tuning parameters, not meters or stock course settings. At maximum density, the first 1,200 units from the camera are clear, objects at 2,200 units are halfway blended, and fog-enabled objects at 3,200 units are fully blended. This keeps a clear foreground instead of collapsing the fog range onto the player.
 
-The distance end is `10 + 50000 * (1 - fog / 100)^2` game units; start is one quarter of end. These are deliberately chosen mod parameters, not claimed stock settings or real-world meters. The whiteout is guaranteed by the final opaque rectangle, independently of distance-fog material coverage. The 0–1280 rectangle covers the game's full logical screen under its own orthographic port, including split-screen views.
+The previous version also painted a screen-sized white rectangle and reduced the fog end to 10 units. That caused the reported white characters. The corrected generator emits **no overlay routine and no HUD draw hook**. The sky and intentionally unfogged materials may remain visible; this uses the game's depth fog, not volumetric particles. The browser gradient is illustrative, not a game screenshot.
+
+**Upgrading:** replace/disable the old generated code, fully stop and restart emulation, and start a fresh race. Do not load an old save state: removing AR lines does not undo code already written into memory.
 
 | Address | Original word | Purpose |
 | --- | --- | --- |
-| `80182490` | `9421FFC0` | Entry to native material fog setter; replacement replays original stack allocation |
-| `801A1E64` | `4BF824C5` | HUD draw call; replacement draws the fog veil then tail-calls original `80124328` |
-| `80005000–80005073` | zero padding | Fog veil routine |
-| `800050C0–800050DB` | zero padding | Rectangle size, alpha, fog type, distances and color |
+| `80182490` | `9421FFC0` | Native fog setter hook; replays original stack allocation |
+| `800050CC–800050DB` | zero padding | Fog type, start, end and color |
 | `800050E0–8000512B` | zero padding | Material argument override |
 
-`tools/assemble_fog.py` reproduces the instruction templates using `keystone-engine`. The patch preserves the stack, link register, nonvolatile registers and original HUD receiver. It reuses native drawing routines rather than adding a second renderer. The browser's gradient preview only illustrates opacity; it is not a game rendering.
+The 24-line option composes with existing item and lap patches. `tools/assemble_fog.py` reproduces its instruction template using `keystone-engine`.
 
 ## Speed
 
@@ -36,7 +35,7 @@ All values are encoded as IEEE-754 single-precision floats. The scalar entries a
 
 ## Prior art and validation
 
-The repository had no open fog/speed implementation or fork to reuse. Ralf's [fog-disable codes](https://www.gc-forever.com/forums/viewtopic.php?start=25&t=2435) only remove course fog and cannot provide the requested whiteout. [doldecomp/mkdd](https://github.com/doldecomp/mkdd) provides the material and draw-order semantics; its debug addresses cannot be used for the retail executable. The new hooks were located and verified in the retail USA disc. MKDD Extender's disc-patching workflow is unnecessary for this offline AR generator.
+[doldecomp/mkdd's native material setter](https://github.com/doldecomp/mkdd/blob/main/src/Kaneshige/ExModel.cpp) explains how fog-enabled materials receive their distances and color; [libogc's GX definitions](https://github.com/devkitPro/libogc/blob/master/gc/ogc/gx.h) define perspective linear fog. The retail hook and original instructions were independently verified against the user's USA revision 0 disc. Debug-build addresses are not interchangeable with retail addresses.
 
 Run portable checks:
 
@@ -53,4 +52,6 @@ node tests/race-options.cjs /tmp/race-options.json
 python tests/race_options_ppc.py /path/to/GM4E01.iso /tmp/race-options.json
 ```
 
-The native suite checks all 101 fog values across nine modes, null manager/info guards, stack/register restoration, the real rectangle/color/vertex routines' FIFO output, and all 351 speed values through the native four-parameter initializer in three classes. GPU entry points, the orthographic-port receiver and paired-single matrix identity helper are stubbed; this verifies command generation rather than GPU rasterization. Live Dolphin races and high-speed handling have not been tested. The disc image and the user's Dolphin settings are never modified by these checks.
+The native suite checks all 101 fog values across nine modes, null manager/info guards (1,111 argument/scope cases), and the complete retail setter writing two synthetic materials (909 cases). It checks actual fog type/distances/color, unchanged intentionally unfogged materials, original HUD instructions, stack and nonvolatile register restoration. The virtual material accessor is represented by a two-instruction fixture; the setter and floating-point save/restore routines execute from the user's ISO. All 351 speed values still pass the native initializer in three classes (5,265 cases).
+
+Portable regression checks ensure a clear foreground at every slider value, increasing density, absence of overlay writes, and 600 combinations with other options. Browser checks cover slider keyboard controls, automatic regeneration, copy/download, both item modes and desktop/mobile layouts. These checks do not render game graphics: live Dolphin races, cinematic camera angles and GPU appearance remain unverified. The disc image and user's Dolphin settings are never modified by these checks.

@@ -5,19 +5,22 @@ const weights=ITEMS.map(i=>i.weight||0),positions=Array.from({length:8},(_,i)=>i
 const decode=lines=>new Map(lines.map(line=>line.split(' ').map(x=>parseInt(x,16))));
 const float=word=>{const b=Buffer.alloc(4);b.writeUInt32BE(word);return b.readFloatBE();};
 const fixtures=[];
-let previousEnd=Infinity,previousAlpha=-1;
+let previousEnd=Infinity,previousStart=Infinity;
 for(let fog=0;fog<=100;fog++){
   const lines=raceOptionCodes(fog),writes=decode(lines);
-  assert.equal(lines.length,57);assert.equal(writes.size,57);
-  assert.equal(writes.get(0x041A1E64),0x4be6319d);assert.equal(writes.get(0x04182490),0x4be82c50);
-  const alpha=writes.get(0x040050c8)&255,start=float(writes.get(0x040050d0)),end=float(writes.get(0x040050d4));
-  assert(alpha>=previousAlpha);assert(end<=previousEnd);assert(start<end);
+  assert.equal(lines.length,24);assert.equal(writes.size,24);
+  assert.equal(writes.get(0x04182490),0x4be82c50);
+  assert(!writes.has(0x041A1E64),'Never intercept HUD drawing or add a screen overlay');
+  for(const address of writes.keys())assert(address===0x04182490 || (address>=0x040050cc && address<=0x04005128));
+  const start=float(writes.get(0x040050d0)),end=float(writes.get(0x040050d4));
+  assert(start>=1200,'Keep nearby characters outside the fog');
+  assert(start<=previousStart && end<=previousEnd && start<end);
   assert.equal(writes.get(0x040050cc),fog===0?0:2);
-  if(fog===0)assert.equal(alpha,0);
-  if(fog===100)assert.equal(alpha,255,'Maximum fog must fully obscure every world pixel');
-  assert.equal(float(writes.get(0x040050c4)),1280,'Veil covers the entire 640x480 race viewport');
+  const blendAt=z=>fog===0?0:Math.max(0,Math.min(1,(z-start)/(end-start)));
+  for(const z of [0,500,680,1000,1200])assert.equal(blendAt(z),0);
+  if(fog===100){assert.equal(start,1200);assert.equal(end,3200);assert.equal(blendAt(2200),0.5);assert.equal(blendAt(3200),1);}
   assert.equal(writes.get(0x040050d8),0xf0f2f4ff);
-  previousEnd=end;previousAlpha=alpha;
+  previousEnd=end;previousStart=start;
   fixtures.push({fog,code:lines.join('\n')});
 }
 let previousMultiplier=0;
