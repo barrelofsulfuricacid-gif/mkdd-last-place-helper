@@ -89,6 +89,10 @@
           </div>
           <p id="lap-details" class="lap-details">Off: use the game’s normal lap setting.</p>
         </div>
+        <div class="lap-option camera-option">
+          <label class="lap-toggle" for="first-person"><input type="checkbox" id="first-person" aria-describedby="camera-details"><span class="lap-icon" aria-hidden="true">◉</span><span>First-person view<small>Kart-mounted camera during races</small></span></label>
+          <p id="camera-details" class="lap-details" hidden>Forward view from the front of your kart in GP, VS and Time Trial, including split screen. Follows kart size. Rescue and cinematic cameras stay normal. Experimental; not yet tested in live gameplay. Fully restart the game after changing the code.</p>
+        </div>
         <div class="lap-option intro-option">
           <label class="lap-toggle" for="skip-intro"><input type="checkbox" id="skip-intro" aria-describedby="intro-details"><span class="lap-icon" aria-hidden="true">⏩</span><span>Skip intro<small>Straight to the main menu</small></span></label>
           <p id="intro-details" class="lap-details" hidden>Skips the startup logo waits, opening movie and Press Start prompt. Normal loading and any memory-card or display prompts still apply. Fully restart Dolphin after changing the code.</p>
@@ -318,7 +322,18 @@
     }
     return lines;
   }
-  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false}={}) {
+  // tools/assemble_camera.py: normal race camera, per viewport target kart.
+  const CAMERA_WORDS=["806DA3C8","28030000","418200A4","80630038","28030000","41820098","80630008","3863FFFF","28030002","41810088","809F0000","28040000","4182007C","3C608000","C00350B0","C0240568","EC000072","C02350B4","EC210032","C04350B8","EC420032","C06350BC","38840140","38BF01E8","38DF01F4","38E10080","39000003","C0840004","C0A40008","C0C4000C","ECC4307A","ECC530BA","D0C50000","ECC530FA","D0C60000","D0870000","38840010","38A50004","38C60004","38E70004","3908FFFF","2C080000","4082FFC4","387F0080","482B2438"];
+  function firstPersonCodes(enabled=false,kartSize=null){
+    if(typeof enabled!=='boolean')throw new Error('First-person view must be on or off.');
+    if(!enabled)return [];
+    const lines=CAMERA_WORDS.map((word,i)=>`${hex(0x04004fa0+i*4)} ${word}`);
+    // Keep a nonzero camera height even when the visual kart is hidden at 0x.
+    [Math.max(0.01,kartSize??1),90,120,1000].forEach((value,i)=>lines.push(`${hex(0x040050b0+i*4)} ${hex(floatWord(value))}`));
+    lines.push('042B7484 4BD4DB1C');
+    return lines;
+  }
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -340,6 +355,7 @@
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     if(skipIntro)lines.push(...SKIP_INTRO_CODES);
+    lines.push(...firstPersonCodes(firstPerson,kartSize));
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   // Reproducible with tools/assemble_positions.py. The table region is separate
@@ -356,7 +372,7 @@
     if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
     return totals;
   }
-  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false}={}){
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false}={}){
     validateLaps(babyParkLaps);
     const totals=validatePositions(positions),lines=[];
     function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
@@ -379,6 +395,7 @@
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     if(skipIntro)lines.push(...SKIP_INTRO_CODES);
+    lines.push(...firstPersonCodes(firstPerson,kartSize));
     return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions,raceOptionCodes});
@@ -494,7 +511,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked,firstPerson:$('first-person').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+($('first-person').checked?' · First-person view':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -513,6 +530,13 @@
   }
   $('custom-baby-park').addEventListener('change',changeLaps);
   $('baby-park-laps').addEventListener('input',changeLaps);
+  $('first-person').addEventListener('change',()=>{
+    const hadCode=!!current;
+    $('camera-details').hidden=!$('first-person').checked;
+    refresh();
+    if(hadCode && !$('generate').disabled)renderCode();
+    else $('status').textContent='Camera setting updated. Generate a new code when ready.';
+  });
   $('skip-intro').addEventListener('change',()=>{
     const hadCode=!!current;
     $('intro-details').hidden=!$('skip-intro').checked;
