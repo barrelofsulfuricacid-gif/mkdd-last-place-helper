@@ -16,6 +16,7 @@ Choose relative weights for all 19 Mario Kart: Double Dash!! race items, includi
 - Check **Maximum Bananas** to append the banana-limit patch to both copied and downloaded code. It starts unchecked; toggling it updates an already generated code immediately.
 - Enable **Fog / visibility**, then use the **0–100%** slider: 0% clears course fog; 100% gives dense distance fog with a clear foreground around the player. Distant fog-enabled scenery fades into pale fog. No screen overlay is added; the sky and materials without native fog may stay clear.
 - Enable **Kart speed**, then choose a **150–10,000cc equivalent**. All human and CPU karts use the selected scale regardless of the selected class. 150cc is the normal 150cc baseline; 10,000cc multiplies the class-speed parameters and cap by 10000/150 (66.67×). These are modded equivalents, not new native engine classes. Speed affects all modes using these class parameters.
+- Enable **Kart size** for **0–100×** visual scaling of human and CPU karts, with 0.1 steps and a **Reset to 1×** button. Zero collapses the models; 1× is normal. Optionally check **Scale physics and collisions** to also scale kart/wall/course-object collision radii, ground-contact vertices, mass and rotational inertia. At zero, physical size uses a 0.01× minimum. Physical scaling is experimental: suspension, AI, camera and item hitboxes retain their stock tuning, and extreme sizes can be undriveable. Both options start off. See [kart-size patch notes and validation](docs/kart-size.md).
 - Fog and speed start disabled, preserving normal game settings. Moving either slider updates an already-generated code, including in per-position mode. Copy the replacement code and fully restart emulation; do not use an old save state. The small fog preview is illustrative, not a game screenshot.
 - Entirely client-side, with no uploads, tracking, external dependencies, or installation.
 - Download `index.html` and open it in a browser to use the tool offline.
@@ -67,6 +68,7 @@ The game's executable, original hook, and unused patch regions were checked agai
 node tests/generator.cjs
 node tests/positions.cjs
 node tests/race-options.cjs
+node tests/kart-size.cjs
 ```
 
 `tools/assemble_positions.py` reproduces the PowerPC instruction template using `keystone-engine`. The new routine uses the existing hook at `0x8020cbc8` and 132 bytes of the existing code cave at `0x80005420`. Its eight fixed-size 80-byte tables occupy verified zero padding at `0x80004d20–0x80004f9f`. A table starts with a 16-bit total followed by cumulative thresholds and item IDs; a zero total preserves the game's original selection. Both RNG calls preserve the table pointer in nonvolatile r28, and the original epilogue restores the saved registers. Full table writes clear unused slots when settings change. Disable other patches using either region.
