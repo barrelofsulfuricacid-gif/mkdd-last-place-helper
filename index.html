@@ -25,7 +25,7 @@
 <style>
 .race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.size-physics{margin-top:14px}
 .range-ends button{border:0;background:none;padding:0 6px;color:var(--red);font:inherit;text-decoration:underline;cursor:pointer}.range-ends button:disabled{opacity:.45;cursor:default}
-.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:linear-gradient(to bottom,#f0f2f4 0%,#f0f2f4 25%,transparent 88%);opacity:var(--fog-opacity,0)}
+.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 55%,#f0f2f4 5%,transparent 65%),radial-gradient(ellipse at 70% 70%,#f0f2f4 10%,transparent 75%);opacity:var(--fog-opacity,0)}
 </style>
 </head>
 <body>
@@ -98,11 +98,11 @@
           <p id="intro-details" class="lap-details" hidden>Skips the startup logo waits, opening movie and Press Start prompt. Normal loading and any memory-card or display prompts still apply. Fully restart Dolphin after changing the code.</p>
         </div>
         <div class="race-option">
-          <div class="option-heading"><label for="custom-fog"><input type="checkbox" id="custom-fog" aria-describedby="fog-details">Fog / visibility</label><output id="fog-value" for="fog">Track default</output></div>
-          <input id="fog" type="range" min="0" max="100" step="1" value="50" disabled aria-label="Fog intensity" aria-describedby="fog-details">
-          <div class="range-ends"><span>0% · Clear</span><span>100% · Dense</span></div>
+          <div class="option-heading"><label for="custom-fog"><input type="checkbox" id="custom-fog" aria-describedby="fog-details">Particle mist</label><output id="fog-value" for="fog">Track default</output></div>
+          <input id="fog" type="range" min="0" max="100" step="1" value="50" disabled aria-label="Mist density" aria-describedby="fog-details">
+          <div class="range-ends"><span>0% · No mist</span><span>100% · Dense</span></div>
           <div id="fog-preview" class="fog-preview" aria-hidden="true" hidden></div>
-          <p id="fog-details">Off: keep the track’s normal fog. Enable for custom visibility in GP &amp; VS.</p>
+          <p id="fog-details">Off: no added mist. Enable drifting mist particles in GP &amp; VS.</p>
         </div>
         <div class="race-option">
           <div class="option-heading"><label for="custom-speed"><input type="checkbox" id="custom-speed" aria-describedby="speed-details">Kart speed</label><output id="speed-value" for="speed">Game default</output></div>
@@ -282,7 +282,7 @@
     if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>10000)) throw new Error('Speed: choose a whole-number equivalent from 150 to 10,000cc.');
   }
   // Reproducible with tools/assemble_fog.py; disjoint from item and lap patches.
-  const FOG_MATERIAL=['80CDA3C8','28060000','4182003C','80C60038','28060000','41820030','80C60008','2C060002','4182000C','2C060003','4082001C','3CC08000','60C650C0','8086000C','C0260010','C0460014','38A60018','9421FFC0','4817D36C'];
+  const MIST_WORDS=["9421FFC0","7C0802A6","90010044","BF210024","7C7F1B78","808DA3C8","28040000","4182012C","80840038","28040000","41820120","80A40008","2C050002","4182000C","2C050003","4082010C","ABA40020","2C1D0001","41800100","2C1D0004","418100F8","836DB168","281B0000","418200EC","3FC08000","63DE5180","809E003C","38840001","2C040014","41800008","38800000","909E003C","2C040000","408200C4","3B800000","5784103A","7C9B2214","83440200","281A0000","418200A0","C01A01F4","D0010008","C01A01F8","C03E0000","EC00082A","D001000C","C01A01FC","D0010010","7FE3FB78","388008CF","38A10008","481F8615","28030000","41820068","38000001","90030024","C01E0004","D0030028","380000B4","B0030052","38000708","B0030054","C01E0008","D0030004","C01E000C","D0030034","D0030038","D003003C","C01E0010","D0030044","C01E0014","D00300B0","D00300B4","801E0018","900300B8","801E001C","90030108","801E0020","9003010C","3B9C0001","7C1CE800","4180FF48","7FE3FB78","BB210024","80010044","7C0803A6","38210040","481F8954"];
   // Reproducible with tools/assemble_size.py; separate visual/physical scales.
   const SIZE_WORDS=["9421FFE0","7C0802A6","90010024","81030000","91010008","482CF72D","81010008","38A8019C","38C1006C","3800000C","7C0903A6","84E50004","94E60004","4200FFF8","3CA08000","C02541D0","388801A0","7C832378","48000059","880805B3","54002036","818DB168","398C00C0","7D8C0214","39600004","812C0000","38690158","48000035","386901E8","4800002D","38690248","48000025","398C0004","396BFFFF","2C0B0000","4082FFD8","80010024","7C0803A6","38210020","4E800020","7C651B78","7C862378","38000003","7C0903A6","C0050000","EC000072","D0050000","C0050004","EC000072","D0050004","C0050008","EC000072","D0050008","C005000C","C046000C","EC001028","EC000072","EC00102A","D005000C","38A50010","38C60010","4200FFBC","4E800020"];
   const SIZE_SHADOW=["3C808000","C02441D0","807E0028","C00300A8","EC000072","D00300A8","C00300AC","EC000072","D00300AC","807E0020","482CFE4C"];
@@ -293,13 +293,14 @@
   function raceOptionCodes(fog=null,speedCC=null,kartSize=null,scalePhysics=false){
     validateRaceOptions(fog,speedCC,kartSize,scalePhysics);const lines=[];
     const write=(address,word)=>lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);
-    if(fog!==null){
-      // Keep a clear foreground, then blend by camera-space depth only.
-      // Even at maximum density, the near 1,200 game units remain unfogged.
-      const distance=(1-fog/100)**2,start=1200+8000*distance,end=3200+48000*distance;
-      FOG_MATERIAL.forEach((word,i)=>write(0x800050e0+i*4,parseInt(word,16)));
-      [fog===0?0:2,floatWord(start),floatWord(end),0xf0f2f4ff].forEach((word,i)=>write(0x800050cc+i*4,word));
-      write(0x80182490,0x4be82c50);
+    if(fog!==null && fog>0){
+      // Native, short-lived particle bursts around each race camera's look point.
+      // The frame counter at 800051BC must NOT be overwritten by AR each frame.
+      MIST_WORDS.forEach((word,i)=>write(0x80004fa0+i*4,parseInt(word,16)));
+      [floatWord(300),floatWord(2),floatWord(.25),0,floatWord(1),floatWord(180),
+        (0xffffff00|Math.round(80*fog/100))>>>0,0xffffffff,0xd8e0e8ff]
+        .forEach((word,i)=>write(0x80005180+i*4,word));
+      write(0x80189ea8,0x4be7b0f9);
     }
     if(speedCC!==null){
       const scale=speedCC/150;
@@ -323,14 +324,14 @@
     return lines;
   }
   // tools/assemble_camera.py: normal race camera, per viewport target kart.
-  const CAMERA_WORDS=["806DA3C8","28030000","418200A4","80630038","28030000","41820098","80630008","3863FFFF","28030002","41810088","809F0000","28040000","4182007C","3C608000","C00350B0","C0240568","EC000072","C02350B4","EC210032","C04350B8","EC420032","C06350BC","38840140","38BF01E8","38DF01F4","38E10080","39000003","C0840004","C0A40008","C0C4000C","ECC4307A","ECC530BA","D0C50000","ECC530FA","D0C60000","D0870000","38840010","38A50004","38C60004","38E70004","3908FFFF","2C080000","4082FFC4","387F0080","482B2438"];
+  const CAMERA_WORDS=["806DA3C8","28030000","418200A4","80630038","28030000","41820098","80630008","3863FFFF","28030002","41810088","809F0000","28040000","4182007C","3C608000","C00352D4","C0240568","EC000072","C02352D8","EC210032","C04352DC","EC420032","C06352E0","38840140","38BF01E8","38DF01F4","38E10080","39000003","C0840004","C0A40008","C0C4000C","ECC4307A","ECC530BA","D0C50000","ECC530FA","D0C60000","D0870000","38840010","38A50004","38C60004","38E70004","3908FFFF","2C080000","4082FFC4","387F0080","482B21B8"];
   function firstPersonCodes(enabled=false,kartSize=null){
     if(typeof enabled!=='boolean')throw new Error('First-person view must be on or off.');
     if(!enabled)return [];
-    const lines=CAMERA_WORDS.map((word,i)=>`${hex(0x04004fa0+i*4)} ${word}`);
+    const lines=CAMERA_WORDS.map((word,i)=>`${hex(0x04005220+i*4)} ${word}`);
     // Keep a nonzero camera height even when the visual kart is hidden at 0x.
-    [Math.max(0.01,kartSize??1),90,120,1000].forEach((value,i)=>lines.push(`${hex(0x040050b0+i*4)} ${hex(floatWord(value))}`));
-    lines.push('042B7484 4BD4DB1C');
+    [Math.max(0.01,kartSize??1),90,120,1000].forEach((value,i)=>lines.push(`${hex(0x040052d4+i*4)} ${hex(floatWord(value))}`));
+    lines.push('042B7484 4BD4DD9C');
     return lines;
   }
   function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false}={}) {
@@ -450,12 +451,12 @@
     $('size').setAttribute('aria-valuetext',size===null?'Game default':`${size} times normal kart size`);
     $('size-details').textContent=size===null?'Off: keep normal kart sizes. Enable for a 0–100× visual size multiplier for every kart.':'Scales human and CPU kart bodies, drivers, wheels and shadows. 0× collapses their models; 1× is normal. Enable the physics checkbox to also scale physics and collisions. Large sizes can obscure the track. Fully restart after changing the code.';
     $('fog').disabled=fog===null;$('speed').disabled=speed===null;
-    $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Dense':fog===0?' · Clear':''}`;
+    $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Dense':fog===0?' · No mist':''}`;
     $('speed-value').textContent=speed===null?'Game default':`${speed}cc · ${(speed/150).toFixed(2)}×`;
-    $('fog').setAttribute('aria-valuetext',fog===null?'Track default':`${fog} percent fog${fog===100?', dense distance fog':''}`);
+    $('fog').setAttribute('aria-valuetext',fog===null?'Track default':`${fog} percent mist${fog===100?', dense':''}`);
     $('speed').setAttribute('aria-valuetext',speed===null?'Game default':`${speed}cc equivalent, ${(speed/150).toFixed(2)} times the 150cc scale`);
     $('fog-preview').hidden=fog===null;$('fog-preview').style.setProperty('--fog-opacity',fog/100);
-    $('fog-details').textContent=fog===null?'Off: keep the track’s normal fog. Enable for custom visibility in GP & VS.':'GP & VS: distant scenery fades into fog while the foreground stays clear. 0% removes course fog; 100% gives dense distance fog. Sky and materials without native fog may stay clear. Preview is illustrative. Replace the old code and fully restart Dolphin; do not reload a save state.';
+    $('fog-details').textContent=fog===null?'Off: no added mist. Enable drifting mist particles in GP & VS.':'GP & VS: translucent mist particles surround each race camera. 0% adds no mist; 100% is dense. Uses the game’s particle effects; clouds can intersect scenery and cost performance in split-screen. Preview is illustrative. Replace the old code and fully restart Dolphin; do not reload a save state.';
     $('speed-details').textContent=speed===null?'Off: use the selected game class. Enable to choose a 150–10,000cc equivalent for every kart.':'Custom speed for human and CPU karts in every class: 150cc is the baseline; 10,000cc uses a 66.67× class multiplier. These are modded equivalents, not native engine classes. Fully restart after changing the code.';
   }
   function refresh(){
@@ -511,7 +512,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked,firstPerson:$('first-person').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+($('first-person').checked?' · First-person view':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked,firstPerson:$('first-person').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Mist: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+($('first-person').checked?' · First-person view':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);

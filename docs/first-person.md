@@ -6,8 +6,8 @@ This is a front-of-kart viewpoint, slightly ahead of the driver, not a character
 
 ## Retail USA revision 0 patch
 
-- Hook: `0x802b7484`, the `addi r3,r31,0x80` immediately before the normal `KartCam::OutView` look-at arguments. Original instruction: `387F0080`. Replacement: `4BD4DB1C`.
-- Routine: `0x80004fa0–0x80005053` (180 bytes); constants: `0x800050b0–0x800050bf`. Both are checked zero padding in the retail executable, separate from the position tables ending at `0x80004f9f` and fog constants starting at `0x800050cc`.
+- Hook: `0x802b7484`, the `addi r3,r31,0x80` immediately before the normal `KartCam::OutView` look-at arguments. Original instruction: `387F0080`. Replacement: `4BD4DD9C`.
+- Routine: `0x80004fa0–0x80005053` (180 bytes); constants: `0x800050b0–0x800050bf`. Both are checked zero padding in the retail executable, separate from particle mist ending below `0x800051e4` and lap routines starting at `0x80005320`. This relocation allows mist and first-person view to be enabled together.
 - RaceMgr and RaceInfo are null-checked; race modes 1–3 are allowed. The hook is in the normal driving camera path, not the common dispatcher, so special camera paths are not overridden.
 - Each camera's target body comes from `r31+0`, not a hardcoded player slot. The body player-position matrix at `+0x140` provides translation, up and forward vectors. Native size at `+0x568` and the selected visual size determine camera offset.
 - `eye = translation + (90 × up + 120 × forward) × nativeSize × max(0.01, visualSize)`. With size disabled, visualSize is 1. `target = eye + 1000 × forward`. The up vector follows the kart.

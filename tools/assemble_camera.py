@@ -21,14 +21,14 @@ lwz 4, 0(31)
 cmplwi 4, 0
 beq original
 lis 3, -32768
-lfs 0, 0x50b0(3)
+lfs 0, 0x52d4(3)
 lfs 1, 0x568(4)
 fmuls 0, 0, 1
-lfs 1, 0x50b4(3)
+lfs 1, 0x52d8(3)
 fmuls 1, 1, 0
-lfs 2, 0x50b8(3)
+lfs 2, 0x52dc(3)
 fmuls 2, 2, 0
-lfs 3, 0x50bc(3)
+lfs 3, 0x52e0(3)
 addi 4, 4, 0x140
 addi 5, 31, 0x1e8
 addi 6, 31, 0x1f4
@@ -58,7 +58,8 @@ b 0x802b7488
 
 if __name__ == '__main__':
     ks = Ks(KS_ARCH_PPC, KS_MODE_PPC32 | KS_MODE_BIG_ENDIAN)
-    code = bytes(ks.asm(SOURCE, 0x80004fa0)[0])
-    assert 0x80004fa0 + len(code) <= 0x800050b0
+    code = bytes(ks.asm(SOURCE, 0x80005220)[0])
+    code=code[:-4]+(0x48000000|((0x802b7488-(0x80005220+len(code)-4))&0x03fffffc)).to_bytes(4,'big')
+    assert 0x80005220 + len(code) <= 0x800052d4
     print(json.dumps({'words': [code[i:i+4].hex().upper() for i in range(0, len(code), 4)],
-                      'hook': bytes(ks.asm('b 0x80004fa0', 0x802b7484)[0]).hex().upper()}))
+                      'hook': bytes(ks.asm('b 0x80005220', 0x802b7484)[0]).hex().upper()}))

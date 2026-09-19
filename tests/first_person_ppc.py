@@ -22,9 +22,9 @@ V=lambda a:struct.unpack('>fff',u.mem_read(a,12))
 reg=lambda n:getattr(p,f'UC_PPC_REG_{n}')
 SDA,SDA2,STACK=0x803d1420,0x803d45a0,0x817f0000
 MANAGER,INFO=0x81000000,0x81001000
-assert bytes(u.mem_read(0x80004fa0,0x120))==bytes(0x120),'Cave must be retail zero padding'
+assert bytes(u.mem_read(0x80005220,0xc4))==bytes(0xc4),'Cave must be retail zero padding'
 assert bytes(u.mem_read(0x802b7484,20)).hex()=='387f0080389f01e838a1008038df01f44bdf28d9'
-guards=[(a,bytes(u.mem_read(a,16))) for a in (0x80004f90,0x800050c0)]
+guards=[(a,bytes(u.mem_read(a,16))) for a in (0x80005210,0x800052e4)]
 u.reg_write(p.UC_PPC_REG_MSR,0x2000)
 fixtures=json.load(open(sys.argv[2],encoding='utf8'))
 rng=random.Random(1959)
@@ -45,9 +45,9 @@ for fixture in fixtures:
     for line in fixture['code'].splitlines():
         a,v=[int(x,16) for x in line.split()];assert a&0xfe000000==0x04000000
         a=0x80000000|(a&0x1ffffff)
-        assert 0x80004fa0<=a<0x800050c0 or a==0x802b7484
+        assert 0x80005220<=a<0x800052e4 or a==0x802b7484
         W(a,v)
-    u.ctl_remove_cache(0x80004fa0,0x800050c0)
+    u.ctl_remove_cache(0x80005220,0x800052e4)
     u.ctl_remove_cache(0x802b7484,0x802b7498)
     for a,data in guards:assert bytes(u.mem_read(a,16))==data
     # Distinct viewport target pointers: no assumption that player 1 is the target.

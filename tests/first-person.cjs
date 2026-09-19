@@ -15,10 +15,10 @@ for(const create of [o=>generate(weights,o),o=>generatePositions(positions,o)]){
     assert(result.code.startsWith(base+'\n'));
     const extra=result.code.slice(base.length+1).split('\n');
     assert.equal(extra.length,50);
-    assert.equal(extra.at(-1),'042B7484 4BD4DB1C');
+    assert.equal(extra.at(-1),'042B7484 4BD4DD9C');
     const addresses=result.code.split('\n').map(l=>l.split(' ')[0]);
     assert.equal(new Set(addresses).size,addresses.length,'All options must use separate addresses');
-    const scale=Buffer.from(extra.find(l=>l.startsWith('040050B0 ')).split(' ')[1],'hex').readFloatBE();
+    const scale=Buffer.from(extra.find(l=>l.startsWith('040052D4 ')).split(' ')[1],'hex').readFloatBE();
     assert.equal(scale,Math.fround(Math.max(.01,kartSize??1)));
     assert.equal(create({...options,firstPerson:false}).code,base);
     combinations++;

@@ -5,22 +5,22 @@ const weights=ITEMS.map(i=>i.weight||0),positions=Array.from({length:8},(_,i)=>i
 const decode=lines=>new Map(lines.map(line=>line.split(' ').map(x=>parseInt(x,16))));
 const float=word=>{const b=Buffer.alloc(4);b.writeUInt32BE(word);return b.readFloatBE();};
 const fixtures=[];
-let previousEnd=Infinity,previousStart=Infinity;
+let previousAlpha=0;
 for(let fog=0;fog<=100;fog++){
   const lines=raceOptionCodes(fog),writes=decode(lines);
-  assert.equal(lines.length,24);assert.equal(writes.size,24);
-  assert.equal(writes.get(0x04182490),0x4be82c50);
-  assert(!writes.has(0x041A1E64),'Never intercept HUD drawing or add a screen overlay');
-  for(const address of writes.keys())assert(address===0x04182490 || (address>=0x040050cc && address<=0x04005128));
-  const start=float(writes.get(0x040050d0)),end=float(writes.get(0x040050d4));
-  assert(start>=1200,'Keep nearby characters outside the fog');
-  assert(start<=previousStart && end<=previousEnd && start<end);
-  assert.equal(writes.get(0x040050cc),fog===0?0:2);
-  const blendAt=z=>fog===0?0:Math.max(0,Math.min(1,(z-start)/(end-start)));
-  for(const z of [0,500,680,1000,1200])assert.equal(blendAt(z),0);
-  if(fog===100){assert.equal(start,1200);assert.equal(end,3200);assert.equal(blendAt(2200),0.5);assert.equal(blendAt(3200),1);}
-  assert.equal(writes.get(0x040050d8),0xf0f2f4ff);
-  previousEnd=end;previousStart=start;
+  assert.equal(lines.length,fog===0?0:98);assert.equal(writes.size,lines.length);
+  assert(!writes.has(0x04182490),'Never change native material fog');
+  assert(!writes.has(0x041A1E64),'Never intercept HUD drawing');
+  assert(!writes.has(0x040051bc),'Do not reset the mutable frame counter');
+  if(fog>0){
+    assert.equal(writes.get(0x04189ea8),0x4be7b0f9);
+    for(const address of writes.keys())assert(address===0x04189ea8 || (address>=0x04004fa0 && address<0x04005100) || (address>=0x04005180 && address<=0x040051a0));
+    const color=writes.get(0x04005198),alpha=color&255;
+    assert.equal(color>>>8,0xffffff);assert.equal(alpha,Math.round(80*fog/100));
+    assert(alpha>=previousAlpha && alpha>0 && alpha<=80);previousAlpha=alpha;
+    assert.equal(float(writes.get(0x04005184)),2);
+    assert.equal(float(writes.get(0x04005194)),180);
+  }
   fixtures.push({fog,code:lines.join('\n')});
 }
 let previousMultiplier=0;

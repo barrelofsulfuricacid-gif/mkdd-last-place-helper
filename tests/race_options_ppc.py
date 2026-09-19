@@ -1,16 +1,11 @@
-"""Read-only retail ISO validation. Requires unicorn.
-
+"""Read-only GM4E01 rev 0 validation: mist hook fixtures and native speed setup.
 node tests/race-options.cjs /tmp/race-options.json
 python tests/race_options_ppc.py /path/to/GM4E01.iso /tmp/race-options.json
-
-Runs the fog hook and the retail material setter, plus native kart-class
-initialization. The virtual getFog accessor is represented by a tiny PPC
-fixture. This is not a live Dolphin gameplay or GPU rasterization test.
+Requires unicorn. Particle creation/calc are call fixtures, not GPU simulation.
 """
-import json, struct, sys
-from unicorn import Uc, UC_ARCH_PPC, UC_MODE_PPC32, UC_MODE_BIG_ENDIAN
+import json,struct,sys
+from unicorn import Uc,UC_ARCH_PPC,UC_MODE_PPC32,UC_MODE_BIG_ENDIAN,UC_HOOK_CODE
 from unicorn import ppc_const as p
-
 u=Uc(UC_ARCH_PPC,UC_MODE_PPC32|UC_MODE_BIG_ENDIAN)
 u.mem_map(0x80000000,0x1800000)
 with open(sys.argv[1],'rb') as disc:
@@ -20,100 +15,79 @@ with open(sys.argv[1],'rb') as disc:
     for i in range(18):
         offset,addr,size=[struct.unpack_from('>I',dol,base+i*4)[0] for base in (0,0x48,0x90)]
         if size:disc.seek(doloff+offset);u.mem_write(addr,disc.read(size))
+
 W=lambda a,v:u.mem_write(a,struct.pack('>I',v))
 F=lambda a,v:u.mem_write(a,struct.pack('>f',v))
+R=lambda a:struct.unpack('>I',u.mem_read(a,4))[0]
 read_float=lambda a:struct.unpack('>f',u.mem_read(a,4))[0]
 reg=lambda n:getattr(p,f'UC_PPC_REG_{n}')
-freg=lambda n:getattr(p,f'UC_PPC_REG_FPR{n}')
-setf=lambda n,v:u.reg_write(freg(n),struct.unpack('>Q',struct.pack('>d',v))[0])
-getf=lambda n:struct.unpack('>d',struct.pack('>Q',u.reg_read(freg(n))))[0]
 f32=lambda v:struct.unpack('>f',struct.pack('>f',v))[0]
 SDA,SDA2,STACK=0x803d1420,0x803d45a0,0x817f0000
-MANAGER,INFO,DRAWER,ORTHO,VTABLE,PORT,HUD=0x81000000,0x81001000,0x81002000,0x81003000,0x81004000,0x81006000,0x81007000
-assert bytes(u.mem_read(0x80005000,0x12c))==bytes(0x12c)
-assert bytes(u.mem_read(0x801a1e64,4)).hex()=='4bf824c5'
-assert bytes(u.mem_read(0x80182490,4)).hex()=='9421ffc0'
-for address,expected in ((0x80361d44,'3f666666'),(0x80361d48,'3f800000'),(0x80361d4c,'3f933333'),(0x803d1894,'43480000')):
-    assert bytes(u.mem_read(address,4)).hex()==expected
-guards=[(addr,bytes(u.mem_read(addr,16))) for addr in (0x80004ff0,0x80005130)]
-W(MANAGER+56,INFO);W(DRAWER,ORTHO);W(ORTHO,VTABLE);W(VTABLE+20,PORT)
+MANAGER,INFO,CTRL,EMITTER=0x81000000,0x81001000,0x81002000,0x81003000
+assert bytes(u.mem_read(0x80004fa0,0x244))==bytes(0x244)
+assert R(0x80189ea8)==0x48073ba9
+guards=[(a,bytes(u.mem_read(a,n))) for a,n in ((0x80004f90,16),(0x800051e4,16),(0x80182490,4),(0x801a1e64,4))]
+events=[];fail=False;calc=0
+def stub(machine,addr,size,user):
+    global calc
+    assert u.reg_read(reg(3))==MANAGER
+    if addr==0x801fd680:
+        assert u.reg_read(reg(4))==0x8cf
+        pos=u.reg_read(reg(5));events.append(tuple(read_float(pos+4*n) for n in range(3)))
+        u.reg_write(reg(3),0 if fail else EMITTER)
+    else:calc+=1
+    u.reg_write(p.UC_PPC_REG_PC,u.reg_read(p.UC_PPC_REG_LR))
+for addr in (0x801fd680,0x801fda50):u.hook_add(UC_HOOK_CODE,stub,begin=addr,end=addr)
 u.reg_write(p.UC_PPC_REG_MSR,0x2000)
-
 def reset():
-    # The hook-only and full-function checks use different stop addresses.
-    u.ctl_remove_cache(0x80182490,0x80182560)
+    global calc
     for n in range(1,32):u.reg_write(reg(n),0xcafe0000+n)
-    u.reg_write(reg(1),STACK);u.reg_write(reg(2),SDA2);u.reg_write(reg(13),SDA);u.reg_write(reg(30),DRAWER)
-    W(SDA-23608,MANAGER);W(MANAGER+56,INFO)
-
+    u.reg_write(reg(1),STACK);u.reg_write(reg(2),SDA2);u.reg_write(reg(13),SDA);u.reg_write(reg(3),MANAGER)
+    W(SDA-23608,MANAGER);W(MANAGER+56,INFO);W(SDA-20120,CTRL)
+    for i in range(4):
+        cam=0x81010000+i*0x1000;W(CTRL+0x200+i*4,cam)
+        for n in range(3):F(cam+0x1f4+4*n,1000*i+100*n)
+    u.mem_write(EMITTER,bytes([0x5a])*0x140)
+    events.clear();calc=0
 def install(fixture):
+    W(0x80189ea8,0x48073ba9)
     for line in fixture['code'].splitlines():
-        address,value=[int(x,16) for x in line.split()]
-        assert address&0xfe000000==0x04000000
-        address=0x80000000|(address&0x1ffffff)
-        assert (0x800050cc<=address<0x8000512c) or address in (0x80182490,0x80361d44,0x80361d48,0x80361d4c,0x803d1894)
-        W(address,value)
-    for start,end in ((0x80005000,0x80005130),(0x801a1e64,0x801a1e68),(0x80182490,0x80182494)):
-        u.ctl_remove_cache(start,end)
-    for address,data in guards:assert bytes(u.mem_read(address,16))==data
-
-# Synthetic J3D model with two materials: fog-enabled and intentionally unfogged.
-MODEL,TABLE,MAT,PE,VT,ACCESSOR,FOG,STOP=0x81010000,0x81011000,0x81012000,0x81013000,0x81014000,0x81015000,0x81016000,0x81017000
-W(MODEL+0x60,TABLE);u.mem_write(MODEL+0x5c,struct.pack('>H',2))
-for i in range(2):
-    W(TABLE+i*4,MAT+i*0x100);W(MAT+i*0x100+0x34,PE+i*0x100)
-    W(PE+i*0x100,VT);W(PE+i*0x100+4,FOG+i*0x100)
-W(VT+0x30,ACCESSOR)
-W(ACCESSOR,0x80630004);W(ACCESSOR+4,0x4e800020) # lwz r3,4(r3); blr
-u.mem_write(0x81008000,bytes.fromhex('11223344'))
-
+        a,v=[int(x,16) for x in line.split()]
+        assert a&0xfe000000==0x04000000
+        a=0x80000000|(a&0x1ffffff)
+        assert 0x80004fa0<=a<0x80005100 or 0x80005180<=a<=0x800051a0 or a in (0x80189ea8,0x80361d44,0x80361d48,0x80361d4c,0x803d1894)
+        W(a,v)
+    u.ctl_remove_cache(0x80004fa0,0x80005100);u.ctl_remove_cache(0x80189ea8,0x80189eb0)
+    for a,data in guards:assert bytes(u.mem_read(a,len(data)))==data
+def run():
+    u.emu_start(0x80189ea8,0x80189eac,count=2000)
+    assert calc==1 and u.reg_read(reg(1))==STACK
+    for n in range(14,32):assert u.reg_read(reg(n))==0xcafe0000+n
 fixtures=json.load(open(sys.argv[2],encoding='utf8'))
-material_cases=native_material_cases=speed_cases=0
+mist_cases=speed_cases=0
 for fixture in fixtures:
     install(fixture)
     if 'fog' in fixture:
         fog=fixture['fog']
         for mode in range(9):
-            active=mode in (2,3);reset();W(INFO+8,mode)
-            # The material hook must preserve native args outside GP/VS.
-            reset();W(INFO+8,mode);u.reg_write(reg(4),5);u.reg_write(reg(5),0x81008000)
-            for n,value in enumerate((123.,456.,10.,200000.),1):setf(n,value)
-            u.emu_start(0x80182490,0x80182494,count=100)
-            assert u.reg_read(reg(1))==STACK-64
-            assert getf(3)==10. and getf(4)==200000.
-            if active:
-                assert u.reg_read(reg(4))==(0 if fog==0 else 2)
-                assert u.reg_read(reg(5))==0x800050d8
-                assert getf(1)==read_float(0x800050d0) and getf(2)==read_float(0x800050d4)
-            else:
-                assert (u.reg_read(reg(4)),u.reg_read(reg(5)),getf(1),getf(2))==(5,0x81008000,123.,456.)
-            material_cases+=1
-            # Execute the complete native setter, including actual material stores.
-            reset();W(INFO+8,mode);u.reg_write(reg(3),MODEL)
-            u.reg_write(reg(4),5);u.reg_write(reg(5),0x81008000)
-            for n,value in enumerate((123.,456.,10.,200000.),1):setf(n,value)
-            for n in range(28,32):setf(n,n+0.5)
-            u.mem_write(FOG,b'\x02'+bytes(23));u.mem_write(FOG+0x100,bytes(24))
-            u.reg_write(p.UC_PPC_REG_LR,STOP)
-            u.emu_start(0x80182490,STOP,count=1000)
-            assert u.reg_read(p.UC_PPC_REG_PC)==STOP and u.reg_read(reg(1))==STACK
-            for n in range(14,32):assert u.reg_read(reg(n))==(DRAWER if n==30 else 0xcafe0000+n)
-            for n in range(28,32):assert getf(n)==n+0.5
-            assert bytes(u.mem_read(FOG+0x100,24))==bytes(24),'Do not force fog onto intentionally unfogged materials'
-            expected_type=(0 if fog==0 else 2) if active else 5
-            assert u.mem_read(FOG,1)[0]==expected_type
-            start,end=(read_float(0x800050d0),read_float(0x800050d4)) if active else (123.,456.)
-            assert (read_float(FOG+4),read_float(FOG+8),read_float(FOG+12),read_float(FOG+16))==(start,end,10.,200000.)
-            assert bytes(u.mem_read(FOG+20,4))==bytes.fromhex('f0f2f4ff' if active else '11223344')
-            assert bytes(u.mem_read(0x801a1e64,4)).hex()=='4bf824c5','HUD draw remains original'
-            native_material_cases+=1
-
-        for missing in ('manager','info'):
-            reset();W(SDA-23608 if missing=='manager' else MANAGER+56,0)
-            u.reg_write(reg(4),5);setf(1,123.)
-            u.emu_start(0x80182490,0x80182494,count=100)
-            assert u.reg_read(reg(4))==5 and getf(1)==123.
-            material_cases+=1
+            for count in range(6):
+                for fail in (False,True):
+                    for frame in range(20):
+                        reset();W(INFO+8,mode);u.mem_write(INFO+32,struct.pack('>h',count));W(0x800051bc,frame)
+                        run();active=fog>0 and mode in (2,3) and 1<=count<=4 and frame==19
+                        assert events==([(i*1000.,i*1000.+400.,i*1000.+200.) for i in range(count)] if active else [])
+                        if active and not fail:
+                            assert R(EMITTER+36)==1 and read_float(EMITTER+40)==2
+                            assert int.from_bytes(u.mem_read(EMITTER+82,2),'big')==180
+                            assert int.from_bytes(u.mem_read(EMITTER+84,2),'big')==1800
+                            assert read_float(EMITTER+176)==read_float(EMITTER+180)==180
+                            assert R(EMITTER+184)==R(0x80005198)
+                        else:assert bytes(u.mem_read(EMITTER,0x140))==bytes([0x5a])*0x140
+                        mist_cases+=1
+        for missing in ('manager','info','ctrl','camera'):
+            reset();W(INFO+8,2);u.mem_write(INFO+32,struct.pack('>h',1));W(0x800051bc,19)
+            W({'manager':SDA-23608,'info':MANAGER+56,'ctrl':SDA-20120,'camera':CTRL+0x200}[missing],0)
+            run();assert not events;mist_cases+=1
     else:
         for kart_class in range(3):
             for setting in (40.,80.,100.,160.,200.):
@@ -125,6 +99,4 @@ for fixture in fixtures:
                 for i in range(4):assert read_float(0x8100a3f0+i*4)==f32((setting+i)*multiplier)
                 assert read_float(0x803d1894)==f32(200*(fixture['speedCC']/150))
                 speed_cases+=1
-print(json.dumps({'status':'passed','native_fog_material_cases':native_material_cases,'fog_material_scope_cases':material_cases,
-                  'native_speed_cases':speed_cases,'fog':'distance-only; no overlay; clear foreground',
-                  'native_GPU_rasterization':'not run','live_Dolphin_gameplay':'not run'},indent=2))
+print(json.dumps({'status':'passed','mist_hook_fixture_cases':mist_cases,'native_speed_cases':speed_cases,'GPU_rasterization':'not simulated'},indent=2))
