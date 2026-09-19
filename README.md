@@ -13,6 +13,7 @@ Choose relative weights for all 19 Mario Kart: Double Dash!! race items, includi
 - **Last place only** retains the original behavior and a separate mix. In per-position mode, 8th means 8th: a four-kart race uses positions 1–4. Positions 1–7 initially retain normal odds and 8th starts with the catch-up preset.
 - Set any item's weight to zero to exclude it; use whole-number weights from 0 to 1,000.
 - Copy the generated code or download it as a text file.
+- Check **First-person view** for a forward-facing, kart-mounted camera during GP, VS and Time Trial races, including split screen. It follows the kart-size setting and preserves special rescue/cinematic camera paths. Starts off; toggling updates existing code. Experimental: executable-level and browser checks passed, but live gameplay has not been tested. See [camera patch notes](docs/first-person.md).
 - Check **Maximum Bananas** to append the banana-limit patch to both copied and downloaded code. It starts unchecked; toggling it updates an already generated code immediately.
 - Enable **Fog / visibility**, then use the **0–100%** slider: 0% clears course fog; 100% gives dense distance fog with a clear foreground around the player. Distant fog-enabled scenery fades into pale fog. No screen overlay is added; the sky and materials without native fog may stay clear.
 - Enable **Kart speed**, then choose a **150–10,000cc equivalent**. All human and CPU karts use the selected scale regardless of the selected class. 150cc is the normal 150cc baseline; 10,000cc multiplies the class-speed parameters and cap by 10000/150 (66.67×). These are modded equivalents, not new native engine classes. Speed affects all modes using these class parameters.
@@ -69,6 +70,7 @@ node tests/generator.cjs
 node tests/positions.cjs
 node tests/race-options.cjs
 node tests/kart-size.cjs
+node tests/first-person.cjs
 ```
 
 `tools/assemble_positions.py` reproduces the PowerPC instruction template using `keystone-engine`. The new routine uses the existing hook at `0x8020cbc8` and 132 bytes of the existing code cave at `0x80005420`. Its eight fixed-size 80-byte tables occupy verified zero padding at `0x80004d20–0x80004f9f`. A table starts with a 16-bit total followed by cumulative thresholds and item IDs; a zero total preserves the game's original selection. Both RNG calls preserve the table pointer in nonvolatile r28, and the original epilogue restores the saved registers. Full table writes clear unused slots when settings change. Disable other patches using either region.

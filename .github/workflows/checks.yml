@@ -17,3 +17,4 @@ jobs:
       - run: node tests/positions.cjs
       - run: node tests/race-options.cjs
       - run: node tests/kart-size.cjs
+      - run: node tests/first-person.cjs
