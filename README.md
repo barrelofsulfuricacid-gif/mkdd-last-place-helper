@@ -14,6 +14,9 @@ Choose relative weights for all 19 Mario Kart: Double Dash!! race items, includi
 - Set any item's weight to zero to exclude it; use whole-number weights from 0 to 1,000.
 - Copy the generated code or download it as a text file.
 - Check **Maximum Bananas** to append the banana-limit patch to both copied and downloaded code. It starts unchecked; toggling it updates an already generated code immediately.
+- Enable **Fog / visibility**, then use the **0–100%** slider: 0% clears course fog; 100% covers the GP/VS race scene completely in pale fog, including the sky and karts. The HUD and pause menu remain visible. Intermediate settings combine distance fog with a gradually thickening fog veil.
+- Enable **Kart speed**, then choose a **150–500cc equivalent**. All human and CPU karts use the selected scale regardless of the selected class. 150cc is the normal 150cc baseline; 500cc multiplies the class-speed parameters and cap by 500/150 (3.33×). These are modded equivalents, not new native engine classes. Speed affects all modes using these class parameters.
+- Fog and speed start disabled, preserving normal game settings. Moving either slider updates an already-generated code, including in per-position mode. Copy the replacement code and fully restart emulation; do not use an old save state. The small fog preview is illustrative, not a game screenshot.
 - Entirely client-side, with no uploads, tracking, external dependencies, or installation.
 - Download `index.html` and open it in a browser to use the tool offline.
 
@@ -42,6 +45,8 @@ Default weights:
 
 ### Validation and limits
 
+**Fog and speed** passed retail-executable checks in PowerPC emulation: 909 native fog drawing cases, 1,111 fog material/scope cases, and 5,265 native speed-initialization cases. Maximum fog was verified through the native rectangle/color routine's GPU command output: four opaque corners cover the race viewport and blending is disabled, so the destination race pixels are replaced. GPU rasterization and live Dolphin races were **not** tested. Portable checks cover every slider value and 600 combinations with both item modes, lap settings, and Maximum Bananas. Browser checks cover keyboard interaction, automatic regeneration, copying, downloading, defaults, offline use, and desktop/mobile layouts. See [fog and speed patch notes](docs/fog-speed.md).
+
 **Baby Park laps** optionally sets 1–99 laps for every kart in Baby Park Grand Prix and VS races, including single-player GP. Leave the checkbox off to use the game's normal setting. Time Trials and other courses retain their normal lap rules. Changing the setting updates an already-generated code; copy the replacement code into Dolphin, disable the old code, and fully restart emulation.
 
 **10–99 laps is experimental.** The generated code includes additional bounds fixes: the single-digit lap HUD is hidden for long races, only the first nine lap splits are retained in the results, later split popups are suppressed, and unavailable numbered Lakitu signs are skipped. The native final-lap signal and finish condition still use the actual lap count. This is not a two-digit HUD replacement. Native PowerPC checks covered all 99 settings, 456,192 course/mode initialization cases, 4,950 lap crossings through the native finish logic, and 792 native result-copy cases with memory guards. A complete long race in Dolphin has **not** been tested. See [patch notes](docs/baby-park-laps.md) for the hooks and validation scope.
@@ -59,6 +64,7 @@ The game's executable, original hook, and unused patch regions were checked agai
 ```sh
 node tests/generator.cjs
 node tests/positions.cjs
+node tests/race-options.cjs
 ```
 
 `tools/assemble_positions.py` reproduces the PowerPC instruction template using `keystone-engine`. The new routine uses the existing hook at `0x8020cbc8` and 132 bytes of the existing code cave at `0x80005420`. Its eight fixed-size 80-byte tables occupy verified zero padding at `0x80004d20–0x80004f9f`. A table starts with a 16-bit total followed by cumulative thresholds and item IDs; a zero total preserves the game's original selection. Both RNG calls preserve the table pointer in nonvolatile r28, and the original epilogue restores the saved registers. Full table writes clear unused slots when settings change. Disable other patches using either region.
