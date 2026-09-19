@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <meta name="color-scheme" content="light">
-<title>Last-place item mixer · Double Dash</title>
+<title>Item chance mixer · Double Dash</title>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%2322272c' d='M0 0h8v8H0zm16 0h8v8h-8zM8 8h8v8H8zm16 0h8v8h-8zM0 16h8v8H0zm16 0h8v8h-8zM8 24h8v8H8zm16 0h8v8h-8z'/%3E%3C/svg%3E">
 <style>
 :root{--paper:#fff;--white:#fff;--ink:#22272c;--muted:#6b737e;--line:#e1e4e6;--red:#d9433e;--red-hover:#bd302c;--radius:12px;font-family:Inter,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--paper);font-synthesis:none}
@@ -19,6 +19,12 @@
 
 .lap-option{border-top:1px solid var(--line);padding-top:14px;margin:14px 0}.lap-controls{display:flex;align-items:center;gap:12px}.lap-toggle{display:flex;align-items:center;gap:9px;flex:1;cursor:pointer;font-size:13px;font-weight:600}.lap-toggle input{width:17px;height:17px;accent-color:var(--red);margin:0}.lap-icon{font-size:24px}.lap-toggle small{display:block;font-size:11px;font-weight:400;color:var(--muted);margin-top:4px}.lap-number{width:68px;height:38px;border:1px solid #c9cfd5;border-radius:5px;padding:6px 8px;background:#fff;font-variant-numeric:tabular-nums}.lap-number:disabled{color:#949aa1;background:#f6f7f8}.lap-number[aria-invalid=true]{border-color:var(--red)}.lap-details{font-size:11px;line-height:1.6;color:var(--muted);margin-top:10px}
 </style>
+<style>
+.position-settings{margin-top:20px;padding:16px;background:#f7f8f9;border:1px solid var(--line);border-radius:8px}.position-settings>label{display:block;font-size:13px;font-weight:600}.position-settings select{font:inherit;font-size:13px;width:100%;margin:8px 0;padding:10px;border:1px solid #c9cfd5;border-radius:6px;background:white;color:var(--ink)}.position-settings select:focus-visible{outline:3px solid #497ce4;outline-offset:3px}.position-tabs{display:grid;grid-template-columns:repeat(4,1fr);gap:6px;margin:12px 0}.position-tabs button{padding:9px 5px}.position-tabs button[aria-pressed=true]{border-color:var(--red);background:#fff3f0}.position-tabs small{display:block;font-size:10px;color:var(--muted);margin-top:4px}.position-enable{display:flex;align-items:center;gap:8px;font-size:13px}.position-enable input{width:18px;height:18px;accent-color:var(--red)}.position-settings p{font-size:12px;line-height:1.6;color:var(--muted);margin-top:8px}.position-settings #apply-all{margin-top:12px}.item-row input:disabled{opacity:.45}.mix-context{font-size:12px;color:var(--muted);line-height:1.5;margin:-10px 0 16px}
+</style>
+<style>
+.race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:#f0f2f4;opacity:var(--fog-opacity,0)}
+</style>
 </head>
 <body>
 <div class="page">
@@ -28,14 +34,25 @@
     <span class="offline"><span></span> Works offline</span>
   </header>
   <section class="intro" aria-labelledby="title">
-    <div><h1 id="title">Last-place item mixer<span class="title-dot">.</span></h1>
-    <p>Your rules for the back of the pack.</p></div>
+    <div><h1 id="title">Item chance mixer<span class="title-dot">.</span></h1>
+    <p>Your rules for every position in the pack.</p></div>
     <div class="version"><span class="version-dot"></span> USA · GM4E01 · Rev 0</div>
   </section>
   <main id="main">
     <div class="workspace">
       <section class="editor panel" aria-labelledby="weights-title">
         <div class="editor-top"><div><h2 id="weights-title">Set the weights</h2><p>More weight, more chances. Set an item to 0 to exclude it.</p></div></div>
+        <div class="position-settings">
+          <label for="mix-mode">Apply item chances to</label>
+          <select id="mix-mode" aria-describedby="mode-help"><option value="last">Last place only</option><option value="positions">Each race position (1st–8th)</option></select>
+          <p id="mode-help">Last place follows the back of the pack, including races with fewer than 8 karts.</p>
+          <div id="position-controls" hidden>
+            <div id="position-tabs" class="position-tabs" role="group" aria-label="Race position to edit"></div>
+            <label class="position-enable"><input type="checkbox" id="position-enabled"><span id="position-enable-label">Custom chances for 1st place</span></label>
+            <p id="position-help">Unchecked positions keep the game’s normal item chances. CPU racers use the same position settings.</p>
+            <button type="button" id="apply-all">Use this mix for all 8 positions</button>
+          </div>
+        </div>
         <div class="toolbar" aria-label="Weight presets">
           <button type="button" id="preset" class="preset"><span aria-hidden="true">↺</span> Catch-up preset</button>
           <button type="button" id="equal"><span aria-hidden="true">≡</span> Equal weights</button>
@@ -50,6 +67,7 @@
       </section>
       <aside class="result panel" aria-labelledby="mix-title">
         <div class="mix-heading"><h2 id="mix-title">Your mix</h2><div class="total">Total weight <strong id="total">30</strong></div></div>
+        <p id="mix-context" class="mix-context">Preview: last place</p>
         <div id="mix-bar" class="mix-bar" aria-hidden="true"></div>
         <p id="mix-empty" class="empty-mix" hidden>No items in the mix yet.</p>
         <ul id="legend" class="legend" aria-label="Resulting item probabilities"></ul>
@@ -73,6 +91,19 @@
           <label class="lap-toggle" for="skip-intro"><input type="checkbox" id="skip-intro" aria-describedby="intro-details"><span class="lap-icon" aria-hidden="true">⏩</span><span>Skip intro<small>Straight to the main menu</small></span></label>
           <p id="intro-details" class="lap-details" hidden>Skips the startup logo waits, opening movie and Press Start prompt. Normal loading and any memory-card or display prompts still apply. Fully restart Dolphin after changing the code.</p>
         </div>
+        <div class="race-option">
+          <div class="option-heading"><label for="custom-fog"><input type="checkbox" id="custom-fog" aria-describedby="fog-details">Fog / visibility</label><output id="fog-value" for="fog">Track default</output></div>
+          <input id="fog" type="range" min="0" max="100" step="1" value="50" disabled aria-label="Fog intensity" aria-describedby="fog-details">
+          <div class="range-ends"><span>0% · Clear</span><span>100% · Whiteout</span></div>
+          <div id="fog-preview" class="fog-preview" aria-hidden="true" hidden></div>
+          <p id="fog-details">Off: keep the track’s normal fog. Enable for custom visibility in GP &amp; VS.</p>
+        </div>
+        <div class="race-option">
+          <div class="option-heading"><label for="custom-speed"><input type="checkbox" id="custom-speed" aria-describedby="speed-details">Kart speed</label><output id="speed-value" for="speed">Game default</output></div>
+          <input id="speed" type="range" min="150" max="500" step="1" value="150" disabled aria-label="Kart speed in cc equivalent" aria-describedby="speed-details">
+          <div class="range-ends"><span>150cc</span><span>500cc</span></div>
+          <p id="speed-details">Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.</p>
+        </div>
         <p id="error" class="error" role="alert" hidden></p>
         <button type="button" id="generate" class="primary"><span aria-hidden="true">〈/〉</span> Generate AR code</button>
         <div class="code-heading"><h3>Action Replay code</h3><span id="code-badge" class="code-badge">Not generated</span></div>
@@ -81,7 +112,7 @@
         </div>
         <div class="code-actions"><button type="button" id="copy" disabled>Copy code</button><button type="button" id="download" disabled>Download .txt <span aria-hidden="true">↓</span></button></div>
         <p id="status" class="status" role="status" aria-live="polite">Ready when you are.</p>
-        <div class="scope"><span class="scope-label">ITEM PROBABILITIES APPLY TO</span><strong>Multiplayer Grand Prix + VS</strong><p>2+ human karts · Last-place kart overall</p><p class="scope-detail">CPU racers count toward last place. Other positions, single-player and battle keep their normal item probabilities. Maximum Bananas changes item limits globally.</p></div>
+        <div class="scope"><span class="scope-label">ITEM PROBABILITIES APPLY TO</span><strong>Multiplayer Grand Prix + VS</strong><p id="scope-target">2+ human karts · Last-place kart overall</p><p class="scope-detail">Positions include CPU racers. Unconfigured positions, single-player and battle keep their normal item probabilities. Maximum Bananas changes item limits globally.</p></div>
       </aside>
     </div>
     <section class="guide" aria-label="Using your code">
@@ -92,7 +123,7 @@
   <footer><span><span class="flag small" aria-hidden="true"></span> SAME GAME. YOUR RULES.</span><span>Unofficial fan tool · No installation · No tracking</span></footer>
 </div>
 <script>
-/* Last-place item mixer. USA GM4E01 revision 0 only.
+/* Item chance mixer. USA GM4E01 revision 0 only.
  * Runtime template is assembled from assemble_generator.py, not user-provided code.
  * Each four-byte table record is a big-endian exclusive cumulative threshold,
  * an item ID and a padding byte. The native RNG returns 0..total-1 inclusive.
@@ -125,7 +156,7 @@
   const hex = n => (n >>> 0).toString(16).toUpperCase().padStart(8,'0');
   function validate(weights) {
     if (!Array.isArray(weights) || weights.length !== ITEMS.length) throw new Error('Enter a weight for every item.');
-    weights.forEach((weight,i) => {
+    Array.from(weights).forEach((weight,i) => {
       if (typeof weight !== 'number' || !Number.isInteger(weight) || weight < 0 || weight > 1000)
         throw new Error(`${ITEMS[i].name}: use a whole-number weight from 0 to 1,000.`);
     });
@@ -227,7 +258,37 @@
     '041B10AC 60000000',
     '0412DBEC 60000000'
   ]);
-  function generate(weights, {maximumBananas=false,babyParkLaps=null,skipIntro=false}={}) {
+  // Ralf's USA class-speed table and global cap, checked against the retail DOL.
+  // CC is an equivalent scale relative to 150cc, not an extra native game class.
+  const floatWord=value=>{const data=new DataView(new ArrayBuffer(4));data.setFloat32(0,value,false);return data.getUint32(0,false);};
+  function validateRaceOptions(fog,speedCC){
+    if(fog!==null && (typeof fog!=='number'||!Number.isInteger(fog)||fog<0||fog>100)) throw new Error('Fog: choose a whole-number intensity from 0 to 100%.');
+    if(speedCC!==null && (typeof speedCC!=='number'||!Number.isInteger(speedCC)||speedCC<150||speedCC>500)) throw new Error('Speed: choose a whole-number equivalent from 150 to 500cc.');
+  }
+  // Reproducible with tools/assemble_fog.py; disjoint from item and lap patches.
+  const FOG_WORDS=['9421FFD0','7C0802A6','90010034','90610008','808DA3C8','80840038','80840008','2C040002','4182000C','2C040003','40820038','807E0000','81830000','818C0014','7D8903A6','4E800421','3C808000','608450C0','C0240000','C0440000','C0640004','C0840004','38640008','48022371','80610008','80010034','7C0803A6','38210030','4811F2B8'];
+  const FOG_MATERIAL=['80CDA3C8','28060000','4182003C','80C60038','28060000','41820030','80C60008','2C060002','4182000C','2C060003','4082001C','3CC08000','60C650C0','8086000C','C0260010','C0460014','38A60018','9421FFC0','4817D36C'];
+  function raceOptionCodes(fog=null,speedCC=null){
+    validateRaceOptions(fog,speedCC);const lines=[];
+    const write=(address,word)=>lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);
+    if(fog!==null){
+      const fraction=fog/100,end=10+50000*(1-fraction)**2;
+      FOG_WORDS.forEach((word,i)=>write(0x80005000+i*4,parseInt(word,16)));
+      FOG_MATERIAL.forEach((word,i)=>write(0x800050e0+i*4,parseInt(word,16)));
+      // A quadratic veil builds gradually and becomes fully opaque at 100%.
+      // It is drawn after the 3D scene, so sky and unfogged objects cannot leak.
+      const alpha=Math.round(255*fraction*fraction);
+      [0,floatWord(1280),0xf0f2f400|alpha,fog===0?0:2,floatWord(end*.25),floatWord(end),0xf0f2f4ff].forEach((word,i)=>write(0x800050c0+i*4,word));
+      write(0x801a1e64,0x4be6319d);write(0x80182490,0x4be82c50);
+    }
+    if(speedCC!==null){
+      const scale=speedCC/150;
+      [0x80361d44,0x80361d48,0x80361d4c].forEach(address=>write(address,floatWord(1.15*scale)));
+      write(0x803d1894,floatWord(200*scale));
+    }
+    return lines;
+  }
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,skipIntro=false}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -247,27 +308,80 @@
     lines.push(`${hex(0x04000000 | (HOOK&0x01ffffff))} ${TEMPLATE.branch}`);
     if(maximumBananas) lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
+    lines.push(...raceOptionCodes(fog,speedCC));
     if(skipIntro)lines.push(...SKIP_INTRO_CODES);
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
-  root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),generate,validate,validateLaps});
+  // Reproducible with tools/assemble_positions.py. The table region is separate
+  // from the original 188-byte code cave, and verified against the retail DOL.
+  const POSITION_WORDS=['808DA3C8','80840038','80A40008','2C050002','4182000C','2C050003','40820064','A8A4001E','2C050002','41800058','281D0007','41810050','1CBD0050','3F808000','639C4D20','7F9C2A14','A09C0000','2C040000','41820034','38600000','481E8005','A09C0000','3884FFFF','481E7CBD','389C0004','A0A40000','7C032840','4180000C','38840004','4BFFFFF0','88640002','BB410028','4820772C'];
+  const POSITION_NAMES=Object.freeze(['1st','2nd','3rd','4th','5th','6th','7th','8th']);
+  const TABLE_BASE=0x80004d20, TABLE_END=0x80004fa0;
+  function validatePositions(positions){
+    if(!Array.isArray(positions)||positions.length!==8) throw new Error('Configure all 8 race positions.');
+    const totals=Array.from(positions,(weights,i)=>{
+      if(weights===null) return 0;
+      try{return validate(weights);}catch(error){throw new Error(`${POSITION_NAMES[i]} place: ${error.message}`);}
+    });
+    if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
+    return totals;
+  }
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,skipIntro=false}={}){
+    validateLaps(babyParkLaps);
+    const totals=validatePositions(positions),lines=[];
+    function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
+    if(BASE+POSITION_WORDS.length*4>CAVE_END || TABLE_BASE+8*80!==TABLE_END) throw new Error('Invalid position template.');
+    POSITION_WORDS.forEach((word,i)=>write(BASE+i*4,parseInt(word,16)));
+    const distributions=positions.map((weights,rank)=>{
+      const records=[],distribution=[];let cumulative=0;
+      if(weights!==null) weights.forEach((weight,i)=>{
+        if(weight===0)return;
+        cumulative+=weight;records.push(((cumulative<<16)|(ITEMS[i].id<<8))>>>0);
+        distribution.push({...ITEMS[i],weight,probability:weight/totals[rank]});
+      });
+      const table=[totals[rank]<<16,...records];
+      while(table.length<20)table.push(0);
+      table.forEach((word,i)=>write(TABLE_BASE+rank*80+i*4,word));
+      return distribution;
+    });
+    write(HOOK,parseInt(TEMPLATE.branch,16));
+    if(maximumBananas)lines.push(...BANANA_LIMIT_CODES);
+    lines.push(...babyParkCodes(babyParkLaps));
+    lines.push(...raceOptionCodes(fog,speedCC));
+    if(skipIntro)lines.push(...SKIP_INTRO_CODES);
+    return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
+  }
+  root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions,raceOptionCodes});
 })(globalThis);
 
 </script>
 <script>
 (function(){
   'use strict';
-  const {ITEMS,generate,validate,validateLaps}=MKDDMixer;
+  const {ITEMS,POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions}=MKDDMixer;
   const $=id=>document.getElementById(id);
   const icons={shell:'<path d="M4 15a8 8 0 0 1 16 0H4Z"/><path d="M3 16h18v3H3z"/><path d="m9 6 3 5 3-5M12 11l-5 5m5-5 5 5" fill="none" stroke="white" stroke-width="1.4"/>',banana:'<path d="M17 3c-1 7-5 12-12 12 3 7 12 5 14-1 1-4 0-8-2-11Z"/><path d="M18 6c0 7-5 12-10 12" fill="none" stroke="white" stroke-width="1.3"/>',mushroom:'<path d="M3 13a9 9 0 0 1 18 0c0 2-4 3-9 3s-9-1-9-3Z"/><path d="M8 15h8v5H8z"/><circle cx="9" cy="8" r="2" fill="white"/><circle cx="16" cy="11" r="2" fill="white"/>',star:'<path d="m12 2 3.2 6.4 7.1 1-5.1 5 1.2 7L12 18l-6.4 3.4 1.2-7-5.1-5 7.1-1Z"/>',bolt:'<path d="M12 2h7l-6 8h6L7 23l3-11H5Z"/>',box:'<path d="m12 2 9 5v11l-9 5-9-5V7Z"/><path d="m3 7 9 5 9-5M12 12v11" stroke="white" stroke-width="1.4" fill="none"/>',fire:'<path d="M13 1c2 6-4 7-2 12 2-1 4-3 4-6 9 9 4 15-3 15C2 22 1 10 7 7c0 4 1 5 2 6C7 7 11 6 13 1Z"/>',bomb:'<circle cx="11" cy="14" r="8"/><path d="M11 6V3h6l2-2" fill="none" stroke="currentColor" stroke-width="2"/><circle cx="8" cy="11" r="2" fill="white"/>',egg:'<path d="M12 2c4 0 9 9 9 13s-4 7-9 7-9-3-9-7S8 2 12 2Z"/><circle cx="9" cy="9" r="2" fill="white"/><circle cx="16" cy="16" r="3" fill="white"/>',chomp:'<circle cx="11" cy="11" r="9"/><path d="m4 12 4 2 3-2 3 2 4-2" fill="none" stroke="white" stroke-width="1.5"/><circle cx="14" cy="7" r="1.7" fill="white"/><path d="m17 18 4 4" stroke="currentColor" stroke-width="3"/>',heart:'<path d="M12 21 3 12C-2 4 8-1 12 7c4-8 14-3 9 5Z"/>'};
   const inputs=[];let current=null;let revision=0;let clipboardAttempt=0;
+  const defaultWeights=()=>ITEMS.map(item=>item.weight||0);
+  let lastWeights=defaultWeights(),selectedPosition=7;
+  const positionWeights=Array.from({length:8},defaultWeights),positionEnabled=Array.from({length:8},(_,i)=>i===7);
+  const perPosition=()=>$('mix-mode').value==='positions';
+  const custom=()=>!perPosition()||positionEnabled[selectedPosition];
+  const configuration=()=>positionWeights.map((weights,i)=>positionEnabled[i]?weights:null);
+  function saveWeights(){if(perPosition())positionWeights[selectedPosition]=weights();else lastWeights=weights();}
+  function loadWeights(){const values=perPosition()?positionWeights[selectedPosition]:lastWeights;inputs.forEach((input,i)=>input.value=Number.isNaN(values[i])?'':values[i]);}
+  POSITION_NAMES.forEach((name,i)=>{
+    const button=document.createElement('button');button.type='button';button.setAttribute('aria-pressed','false');
+    button.addEventListener('click',()=>{saveWeights();selectedPosition=i;loadWeights();refresh();});
+    $('position-tabs').append(button);
+  });
   function percent(n){return (n*100).toLocaleString('en-US',{maximumFractionDigits:2})+'%';}
   function icon(item){return `<span class="item-icon" style="color:${item.color}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor">${icons[item.symbol]}</svg>${item.triple?'<span class="triple">×3</span>':''}</span>`;}
   ITEMS.forEach((item,i)=>{
     const row=document.createElement('div');row.className='item-row';
     row.innerHTML=`<label class="item-label" for="weight-${item.id}">${icon(item)}<span>${item.name}</span></label><input id="weight-${item.id}" aria-label="${item.name} weight" aria-describedby="weight-help" type="number" inputmode="numeric" min="0" max="1000" step="1" value="${item.weight||0}"><output class="chance" for="weight-${item.id}">0%</output>`;
     $(item.group==='standard'?'standard-items':'special-items').append(row);
-    const input=row.querySelector('input');inputs.push(input);input.addEventListener('input',refresh);
+    const input=row.querySelector('input');inputs.push(input);input.addEventListener('input',()=>{saveWeights();refresh();});
   });
   function laps(){return $('custom-baby-park').checked?($('baby-park-laps').value.trim()===''?NaN:Number($('baby-park-laps').value)):null;}
   function lapDetails(){
@@ -276,38 +390,73 @@
     $('lap-details').textContent=on?'Baby Park only, for every kart in GP & VS. Above 9 laps: the lap counter is hidden, results show the first 9 splits, and later split popups are suppressed. Experimental: code paths checked, full Dolphin race not yet tested. Fully restart the game after changing the code.':'Off: use the game’s normal lap setting.';
   }
   function weights(){return inputs.map(input=>input.value.trim()===''?NaN:Number(input.value));}
+  const fogSetting=()=>$('custom-fog').checked?Number($('fog').value):null;
+  const speedSetting=()=>$('custom-speed').checked?Number($('speed').value):null;
+  function raceOptionDetails(){
+    const fog=fogSetting(),speed=speedSetting();
+    $('fog').disabled=fog===null;$('speed').disabled=speed===null;
+    $('fog-value').textContent=fog===null?'Track default':`${fog}%${fog===100?' · Whiteout':fog===0?' · Clear':''}`;
+    $('speed-value').textContent=speed===null?'Game default':`${speed}cc · ${(speed/150).toFixed(2)}×`;
+    $('fog').setAttribute('aria-valuetext',fog===null?'Track default':`${fog} percent fog${fog===100?', complete whiteout':''}`);
+    $('speed').setAttribute('aria-valuetext',speed===null?'Game default':`${speed}cc equivalent, ${(speed/150).toFixed(2)} times the 150cc scale`);
+    $('fog-preview').hidden=fog===null;$('fog-preview').style.setProperty('--fog-opacity',(fog/100)**2);
+    $('fog-details').textContent=fog===null?'Off: keep the track’s normal fog. Enable for custom visibility in GP & VS.':'GP & VS: 0% removes course fog; 100% completely hides the race scene in pale fog, including the sky and karts. The HUD and pause menu stay visible. The small preview is illustrative. Fully restart after changing the code.';
+    $('speed-details').textContent=speed===null?'Off: use the selected game class. Enable to choose a 150–500cc equivalent for every kart.':'Custom speed for human and CPU karts in every class: 150cc is the baseline; 500cc uses a 3.33× class multiplier. This is a modded equivalent, not a native 500cc mode. Fully restart after changing the code.';
+  }
   function refresh(){
     revision++;clipboardAttempt++;current=null;
     $('code').value='';$('copy').disabled=true;$('download').disabled=true;
     $('code-badge').textContent='Not generated';$('status').textContent='Weights updated. Generate a new code when ready.';
-    const values=weights();let total=0,message='';
-    try{total=validate(values);}catch(error){message=error.message;}
-    $('error').hidden=!message;$('error').textContent=message;$('generate').disabled=!!message;
+    const values=weights();let total=0,message='',configurationError='';
+    if(custom()){try{total=validate(values);}catch(error){message=error.message;}}
+    else message='Normal game probabilities';
+    try{if(perPosition())validatePositions(configuration());else validate(values);}catch(error){configurationError=error.message;}
+    $('error').hidden=!configurationError;$('error').textContent=configurationError;$('generate').disabled=!!configurationError;
+    $('position-controls').hidden=!perPosition();
+    $('mode-help').textContent=perPosition()?'Choose a position, then enable and edit its custom chances. One code includes every configured position.':'Last place follows the back of the pack, including races with fewer than 8 karts.';
+    $('position-enabled').checked=positionEnabled[selectedPosition];
+    $('position-enable-label').textContent=`Custom chances for ${POSITION_NAMES[selectedPosition]} place`;
+    Array.from($('position-tabs').children).forEach((button,i)=>{
+      button.innerHTML=`${POSITION_NAMES[i]}<small>${positionEnabled[i]?'Custom':'Normal'}</small>`;
+      button.setAttribute('aria-pressed',String(i===selectedPosition));
+    });
+    $('mix-context').textContent=perPosition()?`Preview: ${POSITION_NAMES[selectedPosition]} place · ${positionEnabled.filter(Boolean).length} of 8 positions customized`:'Preview: last place';
+    $('scope-target').textContent=perPosition()?'2+ human karts · Custom chances by race position':'2+ human karts · Last-place kart overall';
+    ['preset','equal','clear'].forEach(id=>$(id).disabled=!custom());
+    $('apply-all').disabled=!custom()||!!message;
     $('total').textContent=message?'—':total.toLocaleString('en-US');
     $('mix-bar').replaceChildren();$('legend').replaceChildren();
     const active=ITEMS.map((item,i)=>({...item,weight:values[i]})).filter(item=>item.weight>0).sort((a,b)=>b.weight-a.weight);
     inputs.forEach((input,i)=>{
       const valid=Number.isInteger(values[i])&&values[i]>=0&&values[i]<=1000;
-      input.setAttribute('aria-invalid',String(!valid));
+      input.disabled=!custom();input.setAttribute('aria-invalid',String(custom()&&!valid));
       input.closest('.item-row').classList.toggle('active',valid&&values[i]>0);
       input.nextElementSibling.textContent=message?'—':percent(values[i]/total);
     });
     let lapError='';try{validateLaps(laps());}catch(error){lapError=error.message;}
     $('baby-park-laps').setAttribute('aria-invalid',String(!!lapError));
-    if(lapError){$('error').hidden=false;$('error').textContent=message||lapError;$('generate').disabled=true;}
+    if(lapError){$('error').hidden=false;$('error').textContent=configurationError||lapError;$('generate').disabled=true;}
+    try{validateRaceOptions(fogSetting(),speedSetting());}catch(error){$('error').hidden=false;$('error').textContent=error.message;$('generate').disabled=true;}
     $('mix-empty').hidden=!message;
-    $('mix-empty').textContent=values.every(v=>v===0)?'No items in the mix yet.':'Update the weights to preview your mix.';
+    $('mix-empty').textContent=!custom()?'This position keeps the game’s normal item chances. Enable custom chances to edit its mix.':values.every(v=>v===0)?'No items in the mix yet.':'Update the weights to preview your mix.';
     if(!message) active.forEach(item=>{
       const segment=document.createElement('span');segment.className='mix-segment';segment.style.background=item.color;segment.style.flexGrow=item.weight;segment.title=`${item.name}: ${percent(item.weight/total)}`;$('mix-bar').append(segment);
       const li=document.createElement('li');li.innerHTML=`<span class="dot" style="background:${item.color}"></span><span>${item.name}</span><span class="probability">${percent(item.weight/total)}</span>`;$('legend').append(li);
     });
   }
-  function preset(kind){inputs.forEach((input,i)=>input.value=kind==='equal'?1:kind==='clear'?0:ITEMS[i].weight||0);refresh();$('status').textContent=kind==='clear'?'All weights cleared. Choose at least one item.':kind==='equal'?'All 19 items have equal weight.':'Your catch-up preset is loaded.';}
+  function preset(kind){inputs.forEach((input,i)=>input.value=kind==='equal'?1:kind==='clear'?0:ITEMS[i].weight||0);saveWeights();refresh();$('status').textContent=kind==='clear'?'All weights cleared for this mix. Choose at least one item.':kind==='equal'?'All 19 items have equal weight in this mix.':'Your catch-up preset is loaded for this mix.';}
+  $('mix-mode').addEventListener('change',()=>{loadWeights();refresh();});
+  $('position-enabled').addEventListener('change',()=>{positionEnabled[selectedPosition]=$('position-enabled').checked;refresh();});
+  $('apply-all').addEventListener('click',()=>{
+    saveWeights();const values=weights();
+    positionWeights.forEach((_,i)=>{positionWeights[i]=values.slice();positionEnabled[i]=true;});
+    refresh();$('status').textContent='This mix is now applied to all 8 positions. You can still edit each one separately.';
+  });
   $('preset').addEventListener('click',()=>preset('catchup'));
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{current=generate(weights(),{maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),skipIntro:$('skip-intro').checked});$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+($('skip-intro').checked?' · Skip intro':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),skipIntro:$('skip-intro').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Fog: '+fogSetting()+'%':'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -333,6 +482,9 @@
     if(hadCode && !$('generate').disabled)renderCode();
     else $('status').textContent='Intro setting updated. Generate a new code when ready.';
   });
+  function changeRaceOptions(){const hadCode=!!current;raceOptionDetails();refresh();if(hadCode&&!$('generate').disabled)renderCode();}
+  ['custom-fog','custom-speed'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
+  ['fog','speed'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
   $('copy').addEventListener('click',async()=>{
     if(!current)return;
     const text=current.code,started=revision,attempt=++clipboardAttempt;
@@ -351,10 +503,10 @@
     if(!current)return;
     const blob=new Blob([current.code+'\n'],{type:'text/plain;charset=utf-8'});
     const url=URL.createObjectURL(blob),link=document.createElement('a');
-    link.href=url;link.download='MKDD-last-place-GM4E01-AR.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
-    $('status').textContent='Download requested: MKDD-last-place-GM4E01-AR.txt';
+    link.href=url;link.download=perPosition()?'MKDD-per-position-GM4E01-AR.txt':'MKDD-last-place-GM4E01-AR.txt';document.body.append(link);link.click();link.remove();setTimeout(()=>URL.revokeObjectURL(url),1000);
+    $('status').textContent=`Download requested: ${link.download}`;
   });
-  refresh();$('status').textContent='Your catch-up preset is ready. Generate a code to use it.';
+  raceOptionDetails();refresh();$('status').textContent='Your catch-up preset is ready. Generate a code to use it.';
 })();
 
 </script>

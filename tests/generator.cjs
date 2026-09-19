@@ -103,5 +103,18 @@ for(const fixture of fixtures)for(const babyParkLaps of [null,1,9,10,99])for(con
   introCases++;
 }
 assert.throws(()=>generate(ITEMS.map(()=>0),{skipIntro:true}));
+for(const positions of [Array(8).fill(null),Array.from({length:8},()=>ITEMS.map(()=>1))]){
+  for(const fog of [null,0,100])for(const speedCC of [null,150,500]){
+    const options={maximumBananas:true,babyParkLaps:99,fog,speedCC};
+    const base=MKDDMixer.generatePositions(positions,options);
+    const enabled=MKDDMixer.generatePositions(positions,{...options,skipIntro:true});
+    assert.equal(enabled.code,base.code+'\n'+introPatch);
+    const addresses=enabled.code.split('\n').map(line=>line.split(' ')[0]);
+    assert.equal(new Set(addresses).size,addresses.length);
+    const lastBase=generate(fixtures[0].weights,options);
+    assert.equal(generate(fixtures[0].weights,{...options,skipIntro:true}).code,lastBase.code+'\n'+introPatch);
+    introCases+=2;
+  }
+}
 console.log(JSON.stringify({status:'passed',introCases,introLines:5}));
 console.log(JSON.stringify({status:'passed',fixtureCount:fixtures.length,ticketAndFuzzChecks:checks,bananaPatchCases:fixtures.length,invalidInputChecks:12,itemIDs:ITEMS.map(i=>i.id)}));
