@@ -103,7 +103,7 @@ for(const fixture of fixtures)for(const babyParkLaps of [null,1,9,10,99])for(con
   introCases++;
 }
 assert.throws(()=>generate(ITEMS.map(()=>0),{skipIntro:true}));
-for(const positions of [Array(8).fill(null),Array.from({length:8},()=>ITEMS.map(()=>1))]){
+for(const positions of [Array.from({length:8},(_,i)=>i===7?fixtures[0].weights:null),Array.from({length:8},()=>ITEMS.map(()=>1))]){
   for(const fog of [null,0,100])for(const speedCC of [null,150,500]){
     const options={maximumBananas:true,babyParkLaps:99,fog,speedCC};
     const base=MKDDMixer.generatePositions(positions,options);
