@@ -23,6 +23,7 @@ reg=lambda n:getattr(p,f'UC_PPC_REG_{n}')
 SDA,SDA2,STACK=0x803d1420,0x803d45a0,0x817f0000
 MANAGER,INFO=0x81000000,0x81001000
 assert bytes(u.mem_read(0x80005220,0xc4))==bytes(0xc4),'Cave must be retail zero padding'
+assert bytes(u.mem_read(0x80004c68,0x18))==bytes(0x18)
 assert bytes(u.mem_read(0x802b7484,20)).hex()=='387f0080389f01e838a1008038df01f44bdf28d9'
 guards=[(a,bytes(u.mem_read(a,16))) for a in (0x80005210,0x800052e4)]
 u.reg_write(p.UC_PPC_REG_MSR,0x2000)
@@ -45,8 +46,9 @@ for fixture in fixtures:
     for line in fixture['code'].splitlines():
         a,v=[int(x,16) for x in line.split()];assert a&0xfe000000==0x04000000
         a=0x80000000|(a&0x1ffffff)
-        assert 0x80005220<=a<0x800052e4 or a==0x802b7484
+        assert 0x80005220<=a<0x800052e4 or a==0x802b7484 or 0x80004c68<=a<0x80004c80
         W(a,v)
+    u.ctl_remove_cache(0x80004c68,0x80004c80)
     u.ctl_remove_cache(0x80005220,0x800052e4)
     u.ctl_remove_cache(0x802b7484,0x802b7498)
     for a,data in guards:assert bytes(u.mem_read(a,16))==data
@@ -72,9 +74,10 @@ for fixture in fixtures:
                     size=max(.01,fixture['kartSize'] if fixture['kartSize'] is not None else 1)*native_size
                     eye=V(camera+0x1e8);look=V(camera+0x1f4);up=V(STACK+0x80)
                     for axis in range(3):
-                        expected=position[axis]+rows[axis][1]*90*size+rows[axis][2]*120*size
+                        expected=position[axis]+rows[axis][1]*fixture.get('cameraHeight',90)*size+rows[axis][2]*(120-fixture.get('cameraBack',0))*size
                         assert math.isclose(eye[axis],expected,abs_tol=.006)
-                        assert math.isclose(look[axis]-eye[axis],rows[axis][2]*1000,abs_tol=.004)
+                        slope=math.tan(math.radians(fixture.get('cameraTilt',0)))
+                        assert math.isclose(look[axis]-eye[axis],1000*(rows[axis][2]-slope*rows[axis][1]),abs_tol=.004)
                         assert math.isclose(up[axis],rows[axis][1],abs_tol=1e-6)
                     # Only eye and target fields of this camera may change.
                     assert bytes(u.mem_read(camera+4,0x1e4))==bytes(0x1e4)
