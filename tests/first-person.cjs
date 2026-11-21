@@ -11,7 +11,7 @@ for(const create of [o=>generate(weights,o),o=>generatePositions(positions,o)]){
   for(const fog of [null,0,100])for(const speedCC of [null,150,10000])for(const babyParkLaps of [null,1,99])
   for(const maximumBananas of [false,true])for(const skipIntro of [false,true]){
     const options={kartSize,scalePhysics,fog,speedCC,babyParkLaps,maximumBananas,skipIntro};
-    const base=create(options).code,result=create({...options,firstPerson:true});
+    const base=create(options).code,result=create({...options,firstPerson:true,driftIndicator:false});
     assert(result.code.startsWith(base+'\n'));
     const extra=result.code.slice(base.length+1).split('\n');
     assert.equal(extra.length,50);
@@ -24,9 +24,11 @@ for(const create of [o=>generate(weights,o),o=>generatePositions(positions,o)]){
     combinations++;
   }
 }
-for(const kartSize of [null,0,.1,1,10,100]){
+for(const kartSize of [null,0,.1,1,10,100])for(const cameraBack of [0,90,200]){
+  const cameraHeight=({0:90,90:0,200:160})[cameraBack];
+  const cameraTilt=({0:0,90:12,200:30})[cameraBack];
   const base=generate(weights,{kartSize}).code;
-  fixtures.push({kartSize,code:generate(weights,{kartSize,firstPerson:true}).code.slice(base.length+1)});
+  fixtures.push({kartSize,cameraBack,cameraHeight,cameraTilt,code:generate(weights,{kartSize,cameraBack,cameraHeight,cameraTilt,firstPerson:true,driftIndicator:false}).code.slice(base.length+1)});
 }
 if(process.argv[2])fs.writeFileSync(process.argv[2],JSON.stringify(fixtures));
 console.log(`First person: ${combinations} option combinations, off-default parity, invalid input and address isolation passed.`);

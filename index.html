@@ -26,6 +26,7 @@
 .race-option{padding:15px 0;border-top:1px solid var(--line)}.race-option .option-heading{display:flex;align-items:center;justify-content:space-between;gap:10px}.race-option label{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600;cursor:pointer}.race-option input[type=checkbox]{width:17px;height:17px;accent-color:var(--red);margin:0}.race-option output{font-size:12px;font-weight:650;font-variant-numeric:tabular-nums;white-space:nowrap}.race-option input[type=range]{display:block;width:100%;height:28px;margin:10px 0 0;accent-color:var(--red);cursor:pointer}.race-option input:disabled{opacity:.45;cursor:default}.range-ends{display:flex;justify-content:space-between;font-size:10px;color:var(--muted)}.race-option p{font-size:11px;line-height:1.6;color:var(--muted);margin-top:9px}.size-physics{margin-top:14px}
 .range-ends button{border:0;background:none;padding:0 6px;color:var(--red);font:inherit;text-decoration:underline;cursor:pointer}.range-ends button:disabled{opacity:.45;cursor:default}
 .fog-preview{height:35px;margin-top:10px;border-radius:5px;overflow:hidden;background:linear-gradient(170deg,#b5cede 45%,#63895d 46%,#526e48 64%,#666 65%);position:relative}.fog-preview::after{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 55%,#f0f2f4 5%,transparent 65%),radial-gradient(ellipse at 70% 70%,#f0f2f4 10%,transparent 75%);opacity:var(--fog-opacity,0)}
+.camera-controls{margin:12px 0 0;padding:0;border:0}.camera-controls .option-heading{margin-top:10px}.camera-controls button{margin-top:8px}.respawn-ranks{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px;border:0;margin:12px 0 0;padding:0}.respawn-ranks legend{font-size:12px;margin-bottom:8px}.respawn-ranks label{border:1px solid var(--line);border-radius:5px;padding:7px 4px;justify-content:center}
 </style>
 </head>
 <body>
@@ -89,9 +90,28 @@
           </div>
           <p id="lap-details" class="lap-details">Off: use the game’s normal lap setting.</p>
         </div>
+        <div class="race-option">
+          <label><input type="checkbox" id="instant-respawn" aria-describedby="respawn-help">Instant respawn after a fall</label>
+          <p id="respawn-help">Select the race places that return straight to the track in GP, VS and Time Trial. The kart’s place when it falls counts, including CPU karts.</p>
+          <fieldset id="respawn-ranks" class="respawn-ranks" hidden><legend>Enable for these places</legend></fieldset>
+        </div>
         <div class="lap-option camera-option">
           <label class="lap-toggle" for="first-person"><input type="checkbox" id="first-person" aria-describedby="camera-details"><span class="lap-icon" aria-hidden="true">◉</span><span>First-person view<small>Kart-mounted camera during races</small></span></label>
-          <p id="camera-details" class="lap-details" hidden>Forward view from the front of your kart in GP, VS and Time Trial, including split screen. Follows kart size. Rescue and cinematic cameras stay normal. Experimental; not yet tested in live gameplay. Fully restart the game after changing the code.</p>
+          <div id="camera-controls" class="race-option camera-controls" hidden>
+            <p id="camera-details">Each viewport follows its own kart in GP, VS and Time Trial. Move the camera back to bring the nose of the kart into view.</p>
+            <div class="option-heading"><label for="camera-back">Move camera back</label><output id="camera-back-value" for="camera-back">0 units</output></div>
+            <input type="range" id="camera-back" min="0" max="200" step="1" value="0">
+            <div class="range-ends"><span>Original view</span><span>Farther back</span></div>
+            <div class="option-heading"><label for="camera-height">Camera height</label><output id="camera-height-value" for="camera-height">90 units</output></div>
+            <input type="range" id="camera-height" min="0" max="160" step="1" value="90">
+            <div class="range-ends"><span>Lower</span><span>Higher</span></div>
+            <div class="option-heading"><label for="camera-tilt">Look down</label><output id="camera-tilt-value" for="camera-tilt">0°</output></div>
+            <input type="range" id="camera-tilt" min="0" max="30" step="1" value="0">
+            <div class="range-ends"><span>Level</span><span>30° down</span></div>
+            <button type="button" id="camera-reset">Reset camera position</button>
+            <label class="size-physics"><input type="checkbox" id="drift-indicator" checked>Show drift charge</label>
+            <p>A bar at the bottom of your view fills as you drift. Yellow marks the start, orange marks a half charge, and blue means the mini-turbo is ready.</p>
+          </div>
         </div>
         <div class="lap-option intro-option">
           <label class="lap-toggle" for="skip-intro"><input type="checkbox" id="skip-intro" aria-describedby="intro-details"><span class="lap-icon" aria-hidden="true">⏩</span><span>Skip intro<small>Straight to the main menu</small></span></label>
@@ -325,16 +345,69 @@
   }
   // tools/assemble_camera.py: normal race camera, per viewport target kart.
   const CAMERA_WORDS=["806DA3C8","28030000","418200A4","80630038","28030000","41820098","80630008","3863FFFF","28030002","41810088","809F0000","28040000","4182007C","3C608000","C00352D4","C0240568","EC000072","C02352D8","EC210032","C04352DC","EC420032","C06352E0","38840140","38BF01E8","38DF01F4","38E10080","39000003","C0840004","C0A40008","C0C4000C","ECC4307A","ECC530BA","D0C50000","ECC530FA","D0C60000","D0870000","38840010","38A50004","38C60004","38E70004","3908FFFF","2C080000","4082FFC4","387F0080","482B21B8"];
-  function firstPersonCodes(enabled=false,kartSize=null){
-    if(typeof enabled!=='boolean')throw new Error('First-person view must be on or off.');
-    if(!enabled)return [];
-    const lines=CAMERA_WORDS.map((word,i)=>`${hex(0x04005220+i*4)} ${word}`);
-    // Keep a nonzero camera height even when the visual kart is hidden at 0x.
-    [Math.max(0.01,kartSize??1),90,120,1000].forEach((value,i)=>lines.push(`${hex(0x040052d4+i*4)} ${hex(floatWord(value))}`));
-    lines.push('042B7484 4BD4DD9C');
+  // GM4E01 revision 0. Reproduce the routine words with tools/assemble_driving.py.
+  const RESCUE_SELECT=["881E0075","28000004","41820074","80ADA3C8","80C50038","80E60008","38E7FFFF","28070002","4181005C","88FF05B3","28070007","41810050","54E7103A","7CA53A14","80A50048","28050000","4182003C","80A50088","38A5FFFF","28050007","4181002C","3CE08000","80E742DC","7CE72C30","70E70001","41820018","38A00002","98BE0076","38A000FE","98BE0077","482BC4AC","482BBA48"];
+  const RESCUE_WARP=["887E0077","280300FE","40820008","482BC010","482BBCF8"];
+  const RESCUE_HEIGHT=["881E0077","280000FE","4082001C","C0210054","C002D834","EC210028","C002D884","EC21002A","D0210054","806DB168","482BA990"];
+  const RESCUE_DROP=["881E0077","280000FE","38000000","40820008","3800000A","482BC208"];
+  const CAMERA_TILT=["ECC530FA","C0E34C68","ECC431FA","4800062C"];
+  const DRIFT_HUD=["9421FFB0","7C0802A6","90010054","BF210034","806DA3C8","80630038","80830008","3884FFFF","28040002","4181013C","ABA30020","389DFFFF","28040003","4181012C","838DB168","281C0000","41820120","3B9C0200","836F01B4","3F408000","3B5A4C20","3C004330","90010010","811C0000","28080000","418200EC","880800E1","2C000000","408200E0","80680000","28030000","418200D4","80030574","70000003","418200C8","880305C7","28000002","418100BC","54191838","7F3ACA14","38A00000","7CC82A14","800600F4","90010014","C8010010","C83A0000","FC000828","C0260140","7CFA2A14","C0470008","EC0100BA","7CFB2A14","C0270004","C047000C","EC000828","EC420828","EC001024","C02700BC","C04700C4","EC420828","EC0008BA","38E10018","7C072D2E","38A50004","2C050008","4180FFA0","C0210018","C01A0010","EC210028","D0210018","C041001C","C07A0014","C09A0018","387A001C","48022885","C01A0020","C0210018","C041001C","EC21002A","EC42002A","C0790028","C09A0024","3879002C","48022861","3B9C0004","3BBDFFFF","2C1D0000","4082FF00","BB210034","80010054","7C0803A6","38210050","480B7E88"];
+  function writeWords(lines,address,words){
+    for(const word of words){
+      lines.push(hex(0x04000000|(address&0x01ffffff))+' '+(typeof word==='number'?hex(word):word));
+      address+=4;
+    }
+  }
+  function hookBranch(lines,from,to,link=false){
+    writeWords(lines,from,[0x48000000|((to-from)&0x03fffffc)|Number(link)]);
+  }
+  function respawnCodes(mask){
+    if(!Number.isInteger(mask)||mask<0||mask>255)throw new Error('Select valid race places for instant respawn.');
+    if(mask===0)return [];
+    const lines=[];
+    writeWords(lines,0x80004220,RESCUE_SELECT);
+    writeWords(lines,0x800042dc,[mask]);
+    writeWords(lines,0x80004320,RESCUE_WARP);
+    writeWords(lines,0x80004340,RESCUE_HEIGHT);
+    writeWords(lines,0x80004380,RESCUE_DROP);
+    hookBranch(lines,0x802bfce0,0x80004220);
+    hookBranch(lines,0x802c0024,0x80004320);
+    hookBranch(lines,0x802becf4,0x80004340);
+    hookBranch(lines,0x802c0598,0x80004380);
     return lines;
   }
-  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false}={}) {
+  function driftCodes(lines){
+    writeWords(lines,0x80004a20,DRIFT_HUD);
+    // Unsigned integer conversion bias, viewport anchor, track and fill geometry.
+    writeWords(lines,0x80004c20,[0x43300000,0,floatWord(.5),floatWord(.83),
+      floatWord(17),floatWord(34),floatWord(8),0x18202cff,floatWord(2),floatWord(4),
+      floatWord(10),0xffde48ff,floatWord(20),0xff882dff,floatWord(30),0x39baffff]);
+    hookBranch(lines,0x80145dc8,0x80004a20,true);
+  }
+  function firstPersonCodes(enabled,kartSize,cameraBack,cameraHeight,cameraTilt,driftIndicator){
+    if(typeof enabled!=='boolean')throw new Error('First-person view must be on or off.');
+    if(!Number.isInteger(cameraBack)||cameraBack<0||cameraBack>200)throw new Error('Move the camera back by 0 to 200 whole units.');
+    if(!Number.isInteger(cameraHeight)||cameraHeight<0||cameraHeight>160)throw new Error('Choose a camera height from 0 to 160 whole units.');
+    if(!Number.isInteger(cameraTilt)||cameraTilt<0||cameraTilt>30)throw new Error('Choose a downward angle from 0 to 30 degrees.');
+    if(typeof driftIndicator!=='boolean')throw new Error('Drift indicator must be on or off.');
+    if(!enabled)return [];
+    const lines=[];
+    CAMERA_WORDS.forEach((word,i)=>{
+      const address=0x80005220+i*4;
+      if(cameraTilt&&address===0x800052a4)hookBranch(lines,address,0x80004c70);
+      else writeWords(lines,address,[word]);
+    });
+    if(cameraTilt){
+      writeWords(lines,0x80004c68,[floatWord(-1000*Math.tan(cameraTilt*Math.PI/180))]);
+      writeWords(lines,0x80004c70,CAMERA_TILT);
+    }
+    // Keep a nonzero camera height even when the visual kart is hidden at 0x.
+    [Math.max(0.01,kartSize??1),cameraHeight,120-cameraBack,1000].forEach((value,i)=>lines.push(`${hex(0x040052d4+i*4)} ${hex(floatWord(value))}`));
+    lines.push('042B7484 4BD4DD9C');
+    if(driftIndicator)driftCodes(lines);
+    return lines;
+  }
+  function generate(weights, {maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false,cameraBack=0,cameraHeight=90,cameraTilt=0,driftIndicator=true,respawnMask=0}={}) {
     validateLaps(babyParkLaps);
     const total = validate(weights);
     const words = TEMPLATE.words.map(s=>parseInt(s,16));
@@ -356,7 +429,8 @@
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     if(skipIntro)lines.push(...SKIP_INTRO_CODES);
-    lines.push(...firstPersonCodes(firstPerson,kartSize));
+    lines.push(...firstPersonCodes(firstPerson,kartSize,cameraBack,cameraHeight,cameraTilt,driftIndicator));
+    lines.push(...respawnCodes(respawnMask));
     return {code:lines.join('\n'),total,distribution,bytes:words.length*4,lines:lines.length};
   }
   // Reproducible with tools/assemble_positions.py. The table region is separate
@@ -364,21 +438,22 @@
   const POSITION_WORDS=['808DA3C8','80840038','80A40008','2C050002','4182000C','2C050003','40820064','A8A4001E','2C050002','41800058','281D0007','41810050','1CBD0050','3F808000','639C4D20','7F9C2A14','A09C0000','2C040000','41820034','38600000','481E8005','A09C0000','3884FFFF','481E7CBD','389C0004','A0A40000','7C032840','4180000C','38840004','4BFFFFF0','88640002','BB410028','4820772C'];
   const POSITION_NAMES=Object.freeze(['1st','2nd','3rd','4th','5th','6th','7th','8th']);
   const TABLE_BASE=0x80004d20, TABLE_END=0x80004fa0;
-  function validatePositions(positions){
+  function validatePositions(positions,allowNormalOdds=false){
     if(!Array.isArray(positions)||positions.length!==8) throw new Error('Configure all 8 race positions.');
     const totals=Array.from(positions,(weights,i)=>{
       if(weights===null) return 0;
       try{return validate(weights);}catch(error){throw new Error(`${POSITION_NAMES[i]} place: ${error.message}`);}
     });
-    if(totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
+    if(!allowNormalOdds&&totals.every(total=>total===0)) throw new Error('Enable custom chances for at least one position.');
     return totals;
   }
-  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false}={}){
+  function generatePositions(positions,{maximumBananas=false,babyParkLaps=null,fog=null,speedCC=null,kartSize=null,scalePhysics=false,skipIntro=false,firstPerson=false,cameraBack=0,cameraHeight=90,cameraTilt=0,driftIndicator=true,respawnMask=0}={}){
     validateLaps(babyParkLaps);
-    const totals=validatePositions(positions),lines=[];
+    const totals=validatePositions(positions,respawnMask>0),lines=[];
     function write(address,word){lines.push(`${hex(0x04000000|(address&0x01ffffff))} ${hex(word)}`);}
     if(BASE+POSITION_WORDS.length*4>CAVE_END || TABLE_BASE+8*80!==TABLE_END) throw new Error('Invalid position template.');
-    POSITION_WORDS.forEach((word,i)=>write(BASE+i*4,parseInt(word,16)));
+    const hasItemMix=totals.some(total=>total>0);
+    if(hasItemMix)POSITION_WORDS.forEach((word,i)=>write(BASE+i*4,parseInt(word,16)));
     const distributions=positions.map((weights,rank)=>{
       const records=[],distribution=[];let cumulative=0;
       if(weights!==null) weights.forEach((weight,i)=>{
@@ -388,16 +463,17 @@
       });
       const table=[totals[rank]<<16,...records];
       while(table.length<20)table.push(0);
-      table.forEach((word,i)=>write(TABLE_BASE+rank*80+i*4,word));
+      if(hasItemMix)table.forEach((word,i)=>write(TABLE_BASE+rank*80+i*4,word));
       return distribution;
     });
-    write(HOOK,parseInt(TEMPLATE.branch,16));
+    if(hasItemMix)write(HOOK,parseInt(TEMPLATE.branch,16));
     if(maximumBananas)lines.push(...BANANA_LIMIT_CODES);
     lines.push(...babyParkCodes(babyParkLaps));
     lines.push(...raceOptionCodes(fog,speedCC,kartSize,scalePhysics));
     if(skipIntro)lines.push(...SKIP_INTRO_CODES);
-    lines.push(...firstPersonCodes(firstPerson,kartSize));
-    return {code:lines.join('\n'),totals,distributions,bytes:POSITION_WORDS.length*4+640,lines:lines.length};
+    lines.push(...firstPersonCodes(firstPerson,kartSize,cameraBack,cameraHeight,cameraTilt,driftIndicator));
+    lines.push(...respawnCodes(respawnMask));
+    return {code:lines.join('\n'),totals,distributions,bytes:hasItemMix?POSITION_WORDS.length*4+640:0,lines:lines.length};
   }
   root.MKDDMixer=Object.freeze({ITEMS:Object.freeze(ITEMS.map(Object.freeze)),POSITION_NAMES,generate,validate,generatePositions,validatePositions,validateLaps,validateRaceOptions,raceOptionCodes});
 })(globalThis);
@@ -422,6 +498,10 @@
     const button=document.createElement('button');button.type='button';button.setAttribute('aria-pressed','false');
     button.addEventListener('click',()=>{saveWeights();selectedPosition=i;loadWeights();refresh();});
     $('position-tabs').append(button);
+    const label=document.createElement('label'),rank=document.createElement('input');
+    rank.type='checkbox';rank.checked=true;rank.value=String(i);
+    label.append(rank,document.createTextNode(name));$('respawn-ranks').append(label);
+    rank.addEventListener('change',changeRaceOptions);
   });
   function percent(n){return (n*100).toLocaleString('en-US',{maximumFractionDigits:2})+'%';}
   function icon(item){return `<span class="item-icon" style="color:${item.color}" aria-hidden="true"><svg viewBox="0 0 24 24" fill="currentColor">${icons[item.symbol]}</svg>${item.triple?'<span class="triple">×3</span>':''}</span>`;}
@@ -442,7 +522,18 @@
   const speedSetting=()=>$('custom-speed').checked?Number($('speed').value):null;
   const sizeSetting=()=>$('custom-size').checked?Number($('size').value):null;
   const physicsSetting=()=>$('custom-size').checked&&$('scale-physics').checked;
+  function respawnMask(){
+    if(!$('instant-respawn').checked)return 0;
+    return Array.from($('respawn-ranks').querySelectorAll('input:checked'))
+      .reduce((mask,input)=>mask|(1<<Number(input.value)),0);
+  }
   function raceOptionDetails(){
+    $('respawn-ranks').hidden=!$('instant-respawn').checked;
+    $('camera-controls').hidden=!$('first-person').checked;
+    for(const id of ['camera-back','camera-height','camera-tilt']){
+      const units=$(id).value+(id==='camera-tilt'?'°':' units');
+      $(id+'-value').textContent=units;$(id).setAttribute('aria-valuetext',units);
+    }
     const fog=fogSetting(),speed=speedSetting(),size=sizeSetting();
     $('scale-physics').disabled=size===null;
     $('physics-details').textContent=physicsSetting()?`Experimental: scales kart-to-kart, wall and course-object collision radii, ground-contact vertices, mass and rotational inertia. ${size===0?'0× keeps a tiny 0.01× physical size to avoid zero mass. ':''}Suspension, AI, camera and item hitboxes are not retuned; extreme sizes can be undriveable.`:'Optional · Experimental. Scales collision boundaries, mass and rotational inertia. Suspension and AI remain stock.';
@@ -466,7 +557,7 @@
     const values=weights();let total=0,message='',configurationError='';
     if(custom()){try{total=validate(values);}catch(error){message=error.message;}}
     else message='Normal game probabilities';
-    try{if(perPosition())validatePositions(configuration());else validate(values);}catch(error){configurationError=error.message;}
+    try{if($('instant-respawn').checked&&!respawnMask())throw new Error('Select at least one race place for instant respawn.');if(perPosition())validatePositions(configuration(),respawnMask()>0);else validate(values);}catch(error){configurationError=error.message;}
     $('error').hidden=!configurationError;$('error').textContent=configurationError;$('generate').disabled=!!configurationError;
     $('position-controls').hidden=!perPosition();
     $('mode-help').textContent=perPosition()?'Choose a position, then enable and edit its custom chances. One code includes every configured position.':'Last place follows the back of the pack, including races with fewer than 8 karts.';
@@ -512,7 +603,7 @@
   $('equal').addEventListener('click',()=>preset('equal'));
   $('clear').addEventListener('click',()=>preset('clear'));
   function renderCode(){
-    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked,firstPerson:$('first-person').checked};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Mist: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+($('first-person').checked?' · First-person view':'')+'. Copy or download it for Dolphin.';}
+    try{const options={maximumBananas:$('maximum-bananas').checked,babyParkLaps:laps(),fog:fogSetting(),speedCC:speedSetting(),kartSize:sizeSetting(),scalePhysics:physicsSetting(),skipIntro:$('skip-intro').checked,firstPerson:$('first-person').checked,cameraBack:Number($('camera-back').value),cameraHeight:Number($('camera-height').value),cameraTilt:Number($('camera-tilt').value),driftIndicator:$('drift-indicator').checked,respawnMask:respawnMask()};current=perPosition()?generatePositions(configuration(),options):generate(weights(),options);$('code').value=current.code;$('copy').disabled=false;$('download').disabled=false;$('code-badge').textContent=`${current.lines} lines`;$('status').textContent='Code ready'+(laps()!==null?' · Baby Park: '+laps()+' laps':'')+($('maximum-bananas').checked?' · Maximum Bananas':'')+(fogSetting()!==null?' · Mist: '+fogSetting()+'%':'')+(sizeSetting()!==null?' · Kart size: '+sizeSetting()+'×'+(physicsSetting()?' + physics':''):'')+(speedSetting()!==null?' · '+speedSetting()+'cc equivalent':'')+($('skip-intro').checked?' · Skip intro':'')+(options.firstPerson?' · First-person view':'')+(options.respawnMask?' · Instant respawn ('+POSITION_NAMES.filter((_,i)=>options.respawnMask&(1<<i)).join(', ')+')':'')+'. Copy or download it for Dolphin.';}
     catch(error){current=null;$('code').value='';$('copy').disabled=true;$('download').disabled=true;$('error').hidden=false;$('error').textContent=error.message;}
   }
   $('generate').addEventListener('click',renderCode);
@@ -531,13 +622,6 @@
   }
   $('custom-baby-park').addEventListener('change',changeLaps);
   $('baby-park-laps').addEventListener('input',changeLaps);
-  $('first-person').addEventListener('change',()=>{
-    const hadCode=!!current;
-    $('camera-details').hidden=!$('first-person').checked;
-    refresh();
-    if(hadCode && !$('generate').disabled)renderCode();
-    else $('status').textContent='Camera setting updated. Generate a new code when ready.';
-  });
   $('skip-intro').addEventListener('change',()=>{
     const hadCode=!!current;
     $('intro-details').hidden=!$('skip-intro').checked;
@@ -546,9 +630,10 @@
     else $('status').textContent='Intro setting updated. Generate a new code when ready.';
   });
   function changeRaceOptions(){const hadCode=!!current;raceOptionDetails();refresh();if(hadCode&&!$('generate').disabled)renderCode();}
-  ['custom-fog','custom-speed','custom-size','scale-physics'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
+  ['custom-fog','custom-speed','custom-size','scale-physics','instant-respawn','first-person','drift-indicator'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
+  $('camera-reset').addEventListener('click',()=>{$('camera-back').value='0';$('camera-height').value='90';$('camera-tilt').value='0';changeRaceOptions();});
   $('size-normal').addEventListener('click',()=>{$('size').value='1';changeRaceOptions();});
-  ['fog','speed','size'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
+  ['fog','speed','size','camera-back','camera-height','camera-tilt'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
   $('copy').addEventListener('click',async()=>{
     if(!current)return;
     const text=current.code,started=revision,attempt=++clipboardAttempt;
