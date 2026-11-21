@@ -108,6 +108,7 @@
             <div class="option-heading"><label for="camera-tilt">Look down</label><output id="camera-tilt-value" for="camera-tilt">0°</output></div>
             <input type="range" id="camera-tilt" min="0" max="30" step="1" value="0">
             <div class="range-ends"><span>Level</span><span>30° down</span></div>
+            <button type="button" id="camera-nose">Show kart nose</button>
             <button type="button" id="camera-reset">Reset camera position</button>
             <label class="size-physics"><input type="checkbox" id="drift-indicator" checked>Show drift charge</label>
             <p>A bar at the bottom of your view fills as you drift. Yellow marks the start, orange marks a half charge, and blue means the mini-turbo is ready.</p>
@@ -631,7 +632,12 @@
   });
   function changeRaceOptions(){const hadCode=!!current;raceOptionDetails();refresh();if(hadCode&&!$('generate').disabled)renderCode();}
   ['custom-fog','custom-speed','custom-size','scale-physics','instant-respawn','first-person','drift-indicator'].forEach(id=>$(id).addEventListener('change',changeRaceOptions));
-  $('camera-reset').addEventListener('click',()=>{$('camera-back').value='0';$('camera-height').value='90';$('camera-tilt').value='0';changeRaceOptions();});
+  function setCameraPosition(back,height,tilt){
+    $('camera-back').value=back;$('camera-height').value=height;$('camera-tilt').value=tilt;
+    changeRaceOptions();
+  }
+  $('camera-nose').addEventListener('click',()=>setCameraPosition(95,150,24));
+  $('camera-reset').addEventListener('click',()=>setCameraPosition(0,90,0));
   $('size-normal').addEventListener('click',()=>{$('size').value='1';changeRaceOptions();});
   ['fog','speed','size','camera-back','camera-height','camera-tilt'].forEach(id=>$(id).addEventListener('input',changeRaceOptions));
   $('copy').addEventListener('click',async()=>{

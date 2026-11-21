@@ -2,7 +2,7 @@
 
 The **First-person view** checkbox defaults to off. It adds a kart-mounted forward camera to normal GP, VS and Time Trial driving, using the target kart of each viewport. It works with either item-chance mode and updates generated/copied/downloaded codes immediately. Replace the old code and fully restart emulation after changing it.
 
-At zero setback the viewpoint sits slightly ahead of the driver. **Move camera back** shifts the eye and target together along the kart’s forward axis. Height ranges from 0 to 160 game units and downward tilt ranges from 0° to 30°. Reset restores zero setback, a height of 90 and a level view. It uses the kart's orientation, including pitch and roll. Other karts and drivers remain visible. Rescue, launch, pipe, rear-view and cinematic camera paths retain native behavior. Battle is excluded. Item-chance restrictions are unchanged.
+At zero setback the viewpoint sits slightly ahead of the driver. **Move camera back** shifts the eye and target together along the kart’s forward axis. Height ranges from 0 to 160 game units and downward tilt ranges from 0° to 30°. **Show kart nose** uses 95 units of setback, a height of 150 and 24° of downward tilt. This framing showed the nose and the road together on Luigi Circuit. Reset restores zero setback, a height of 90 and a level view. It uses the kart's orientation, including pitch and roll. Other karts and drivers remain visible. Rescue, launch, pipe, rear-view and cinematic camera paths retain native behavior. Battle is excluded. Item-chance restrictions are unchanged.
 
 ## Retail USA revision 0 patch
 
